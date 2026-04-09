@@ -1,0 +1,49 @@
+[
+  {
+    "session_id": "S_84b564f9",
+    "messages": [
+      {"role": "human", "content": "Eu sou Pessoa_015 e quero uma pós em saúde mental."},
+      {"role": "ai", "content": "Olá, Karina! Ótimo saber que você atua em Saúde Corporativa. Qual é seu objetivo com a pós?"},
+      {"role": "human", "content": "Quero migrar para atendimento clínico."},
+      {"role": "ai", "content": "Perfeito. Posso te encaminhar para uma especialista e enviar o material."}
+    ]
+  },
+  {
+    "session_id": "S_22492061",
+    "messages": [
+      {"role": "human", "content": "Quero entender as opções de pós na área de tecnologia."},
+      {"role": "ai", "content": "Temos uma ótima pós em Gestão Hospitalar. Você já trabalha com isso?"},
+      {"role": "human", "content": "Não, eu procuro algo de engenharia de software."},
+      {"role": "ai", "content": "Entendi. Posso te mostrar Engenharia de Software também."}
+    ]
+  },
+  {
+    "session_id": "S_f72ec490",
+    "messages": [
+      {"role": "human", "content": "Tenho interesse em saúde mental. Em qual dia da semana são as aulas ao vivo?"},
+      {"role": "ai", "content": "As aulas ao vivo acontecem das 19h30 às 21h."},
+      {"role": "human", "content": "Entendi, obrigado."},
+      {"role": "ai", "content": "Se quiser, posso te enviar o material completo."}
+    ]
+  },
+  {
+    "session_id": "S_68c0d237",
+    "messages": [
+      {"role": "human", "content": "Quem é o professor da pós em Saúde Mental?"},
+      {"role": "ai", "content": "Eu não encontrei essa informação com segurança agora. Posso te encaminhar para uma especialista confirmar."},
+      {"role": "human", "content": "Pode sim."},
+      {"role": "ai", "content": "Perfeito, vou encaminhar seu atendimento agora."}
+    ]
+  },
+  {
+    "session_id": "S_14252299",
+    "messages": [
+      {"role": "human", "content": "Oi, me chamo Ana e quero uma pós em Saúde Mental."},
+      {"role": "ai", "content": "Olá, Ana! Que bom falar com você. Você já atua na área ou quer fazer transição?"},
+      {"role": "human", "content": "Quero transição de carreira."},
+      {"role": "ai", "content": "Entendi. Temos uma pós em Saúde Mental focada nessa transição. Posso te enviar o material e agendar uma conversa com a especialista."},
+      {"role": "human", "content": "Pode enviar."},
+      {"role": "ai", "content": "Enviei o material e já deixei o encaminhamento pronto. Quer que eu registre seu melhor horário para contato?"}
+    ]
+  }
+]
