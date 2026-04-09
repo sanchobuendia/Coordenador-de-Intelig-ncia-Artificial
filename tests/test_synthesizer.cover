@@ -1,0 +1,80 @@
+    1: from evaluator.nodes.synthesizer import build_improvements, build_strengths, classify, heuristic_synthesize
+    1: from evaluator.schemas import (
+           AssertivenessAnalysis,
+           ComplianceAnalysis,
+           ConversationMetadata,
+           CriterionScore,
+           ExtractedFacts,
+           FlowAnalysis,
+           LeadProfile,
+           QualificationAnalysis,
+           ResolutionAnalysis,
+       )
+       
+       
+    1: def build_facts(session_id: str = "S_syn") -> ExtractedFacts:
+    2:     return ExtractedFacts(
+    1:         metadata=ConversationMetadata(session_id=session_id, total_turns=2, lead_turn_count=1, bot_turn_count=1),
+    1:         lead_profile=LeadProfile(lead_name_informed="Ana", lead_area_of_interest="Saúde Mental"),
+    1:         qualification=QualificationAnalysis(),
+    1:         assertiveness=AssertivenessAnalysis(),
+    1:         flow=FlowAnalysis(flow_progression=["saudação", "cta"]),
+    1:         compliance=ComplianceAnalysis(),
+    1:         resolution=ResolutionAnalysis(resolution_status="resolved_in_chat", cta_present=True, last_message_sender="bot"),
+           )
+       
+       
+    1: def build_score(criterion_id: str, score: float, deductions=None) -> CriterionScore:
+   10:     names = {
+   10:         "C1": "Identificação e compreensão da necessidade",
+   10:         "C2": "Assertividade da resposta",
+   10:         "C3": "Condução e fluxo da conversa",
+   10:         "C4": "Conformidade com regras de negócio",
+   10:         "C5": "Desfecho e encaminhamento",
+           }
+   20:     return CriterionScore(
+   10:         criterion_id=criterion_id,
+   10:         criterion_name=names[criterion_id],
+   10:         score=score,
+   10:         justification=f"justificativa {criterion_id}",
+   10:         deductions=deductions or [],
+           )
+       
+       
+    1: def test_classify_thresholds():
+    1:     assert classify(39.9) == "critico"
+    1:     assert classify(59.9) == "atencao"
+    1:     assert classify(74.9) == "regular"
+    1:     assert classify(89.9) == "bom"
+    1:     assert classify(90.0) == "excelente"
+       
+       
+    1: def test_build_strengths_and_improvements():
+    1:     scores = {
+    1:         "C1": build_score("C1", 95),
+    1:         "C2": build_score("C2", 85),
+    1:         "C3": build_score("C3", 40, ["perda de contexto: -20pts"]),
+    1:         "C4": build_score("C4", 60, ["nome errado do lead: -25pts"]),
+    1:         "C5": build_score("C5", 70),
+           }
+    1:     strengths = build_strengths(scores)
+    1:     improvements = build_improvements(scores)
+    1:     assert len(strengths) == 3
+    1:     assert strengths[0].startswith("C1")
+    2:     assert any("corrigir" in item for item in improvements)
+       
+       
+    1: def test_heuristic_synthesize_builds_weighted_report():
+    1:     scores = [
+    1:         build_score("C1", 100),
+    1:         build_score("C2", 100),
+    1:         build_score("C3", 80),
+    1:         build_score("C4", 80),
+    1:         build_score("C5", 90),
+           ]
+    1:     report = heuristic_synthesize("S_syn", build_facts(), scores)
+    1:     assert report.session_id == "S_syn"
+    1:     assert report.score_final == 91.0
+    1:     assert report.classification == "excelente"
+    1:     assert len(report.strengths) == 3
+    1:     assert len(report.improvement_areas) == 3

@@ -376,6 +376,8 @@ def heuristic_extract(state: dict) -> ExtractedFacts:
     )
     if first_course_position is not None and first_background_position is not None and first_course_position < first_background_position:
         context_lost_moments.append("bot apresentou curso antes de concluir a qualificação do lead")
+    if any(turns[index - 1].role == "ai" and turns[index].role == "ai" for index in range(1, len(turns))):
+        context_lost_moments.append("bot enviou mensagens consecutivas sem nova interação do lead")
 
     if lead_signaled_follow_up:
         resolution_status = "pending"
@@ -458,7 +460,11 @@ def llm_extract(state: dict) -> ExtractedFacts:
 def run_extractor(state: dict) -> dict:
     logger.info("[%s] Iniciando extração", state["session_id"])
     logger.debug("[%s] Extração via LLM", state["session_id"])
-    extracted = llm_extract(state)
+    try:
+        extracted = llm_extract(state)
+    except Exception as exc:  # pragma: no cover - exercised in tests via monkeypatch
+        logger.warning("[%s] Falha na extração via LLM; usando fallback heurístico: %s", state["session_id"], exc)
+        extracted = heuristic_extract(state)
     logger.info("[%s] Extração concluída", state["session_id"])
     logger.debug("[%s] Fatos extraídos: %s", state["session_id"], extracted.model_dump(mode="json"))
     return {"extracted_facts": extracted}

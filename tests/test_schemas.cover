@@ -1,0 +1,39 @@
+    1: from evaluator.schemas import EvaluationRequest, EvaluationResponse
+    1: from evaluator.schemas import ErrorDetail
+    1: from evaluator.schemas import EvaluationReport
+       
+       
+    1: def test_evaluation_request_to_text():
+    2:     request = EvaluationRequest(
+    1:         sessionId="S_1",
+    1:         messages=[
+    1:             "human: Olá",
+    1:             "ai: Oi",
+               ],
+           )
+    1:     assert request.to_conversation_text() == "human: Olá\nai: Oi"
+       
+       
+    1: def test_evaluation_request_requires_both_roles():
+    1:     try:
+    1:         EvaluationRequest(sessionId="S_2", messages=["human: Olá", "human: Tudo bem?"])
+    1:     except Exception as exc:
+    1:         assert "human" in str(exc)
+    1:         assert "ai" in str(exc)
+           else:
+>>>>>>         raise AssertionError("Validation should have failed")
+       
+       
+    1: def test_evaluation_request_requires_prefixed_messages():
+    1:     try:
+    1:         EvaluationRequest(sessionId="S_3", messages=["Olá", "ai: Oi"])
+    1:     except Exception as exc:
+    1:         assert "formato" in str(exc)
+           else:
+>>>>>>         raise AssertionError("Validation should have failed")
+       
+       
+    1: def test_response_and_error_schemas_accept_payloads():
+    1:     assert EvaluationResponse.model_fields["success"].default is True
+    1:     assert ErrorDetail(error="x").success is False
+    1:     assert "score_final" in EvaluationReport.model_fields

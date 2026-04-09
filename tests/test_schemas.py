@@ -37,3 +37,4 @@ def test_response_and_error_schemas_accept_payloads():
     assert EvaluationResponse.model_fields["success"].default is True
     assert ErrorDetail(error="x").success is False
     assert "score_final" in EvaluationReport.model_fields
+    assert "executive_summary" in EvaluationReport.model_fields

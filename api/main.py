@@ -16,7 +16,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from evaluator.config import get_settings
-from evaluator.graph import apersistent_graph
+from evaluator.graph import apersistent_graph, graph as default_graph
 from evaluator.schemas import ErrorDetail, EvaluationRequest, EvaluationResponse
 
 settings = get_settings()
@@ -73,8 +73,9 @@ async def evaluate(payload: EvaluationRequest, request: Request) -> EvaluationRe
     start = time.perf_counter()
     logger.info("[%s] Avaliação iniciada — %s mensagens", payload.session_id, len(payload.messages))
     logger.debug("[%s] Payload normalizado: %s", payload.session_id, payload.to_conversation_text())
+    compiled_graph = getattr(request.app.state, "graph", default_graph)
     try:
-        result = await request.app.state.graph.ainvoke(
+        result = await compiled_graph.ainvoke(
             {
                 "session_id": payload.session_id,
                 "conversation": payload.to_conversation_text(),

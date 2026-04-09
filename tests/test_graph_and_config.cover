@@ -1,0 +1,73 @@
+    1: from evaluator import config as config_module
+    1: from evaluator.graph import ALLOWED_MSGPACK_MODULES, build_checkpoint_serde, compile_graph, persistent_graph, route_to_evaluators
+    1: from evaluator.nodes.evaluators import CRITERIA
+       
+       
+    1: def test_route_to_evaluators_creates_one_send_per_criterion():
+    1:     sends = route_to_evaluators({"extracted_facts": object()})
+    1:     assert len(sends) == len(CRITERIA)
+    7:     assert {send.node for send in sends} == {"evaluator"}
+       
+       
+    1: def test_compile_graph_and_persistent_graph_without_db(monkeypatch):
+    1:     config_module.get_settings.cache_clear()
+    1:     monkeypatch.setenv("DB_PATH", "")
+    1:     compiled = compile_graph()
+    1:     assert compiled is not None
+    2:     with persistent_graph() as graph:
+    1:         assert graph is not None
+    1:     config_module.get_settings.cache_clear()
+       
+       
+    1: def test_build_checkpoint_serde_allows_expected_modules():
+    1:     serde = build_checkpoint_serde()
+    1:     assert serde is not None
+    1:     assert ALLOWED_MSGPACK_MODULES == [
+               ("evaluator.schemas", "EvaluationReport"),
+               ("evaluator.schemas", "ExtractedFacts"),
+               ("evaluator.schemas", "CriterionScore"),
+           ]
+       
+       
+    1: def test_get_settings_reads_env(monkeypatch):
+    1:     config_module.get_settings.cache_clear()
+    1:     monkeypatch.setenv("MODEL_PROVIDER", "provider_x")
+    1:     monkeypatch.setenv("BEDROCK_MODEL_ID", "model_y")
+    1:     monkeypatch.setenv("MODEL_TEMPERATURE", "0.7")
+    1:     monkeypatch.setenv("AWS_REGION", "us-test-1")
+    1:     monkeypatch.setenv("DB_PATH", "postgres://example")
+    1:     monkeypatch.setenv("LOG_LEVEL", "debug")
+    1:     settings = config_module.get_settings()
+    1:     assert settings.MODEL_PROVIDER == "provider_x"
+    1:     assert settings.BEDROCK_MODEL_ID == "model_y"
+    1:     assert settings.MODEL_TEMPERATURE == 0.7
+    1:     assert settings.AWS_REGION == "us-test-1"
+    1:     assert settings.DB_PATH == "postgres://example"
+    1:     assert settings.LOG_LEVEL == "DEBUG"
+    1:     config_module.get_settings.cache_clear()
+       
+       
+    1: def test_build_chat_model_with_fallback_uses_primary_model(monkeypatch):
+    2:     class DummyModel:
+    1:         def with_structured_output(self, schema):
+>>>>>>             return self
+       
+    1:         def invoke(self, *args, **kwargs):
+    1:             return {"ok": True, "args": args, "kwargs": kwargs}
+       
+    2:     monkeypatch.setattr(config_module, "get_chat_model", lambda: DummyModel())
+    1:     wrapper = config_module.build_chat_model_with_fallback()
+    1:     assert wrapper.invoke("prompt")["ok"] is True
+       
+       
+    1: def test_fallback_chat_model_uses_secondary_when_primary_identifier_is_invalid():
+    2:     class BrokenPrimary:
+    1:         def invoke(self, *args, **kwargs):
+    1:             raise RuntimeError("The provided model identifier is invalid")
+       
+    2:     class Secondary:
+    1:         def invoke(self, *args, **kwargs):
+    1:             return "fallback-ok"
+       
+    1:     wrapper = config_module.FallbackChatModel(BrokenPrimary(), Secondary())
+    1:     assert wrapper.invoke("prompt") == "fallback-ok"

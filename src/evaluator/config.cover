@@ -1,0 +1,113 @@
+    1: """Runtime configuration helpers."""
+       
+    1: from __future__ import annotations
+       
+    1: import os
+    1: from functools import lru_cache
+    1: from typing import Any
+       
+    1: from pydantic import BaseModel, Field
+       
+    1: try:
+    1:     from dotenv import load_dotenv
+>>>>>> except ModuleNotFoundError:  # pragma: no cover
+>>>>>>     def load_dotenv() -> None:
+>>>>>>         return None
+       
+    1: load_dotenv()
+       
+    1: DEFAULT_MODEL_PROVIDER = "bedrock_converse"
+    1: DEFAULT_BEDROCK_MODEL_ID = ""
+    1: DEFAULT_MODEL_TEMPERATURE = 0.2
+       
+       
+    1: def _get_env(*names: str, default: str | None = None) -> str | None:
+   24:     load_dotenv()
+   36:     for name in names:
+   30:         value = os.getenv(name)
+   30:         if value is not None and value.strip():
+   18:             return value.strip()
+    6:     return default
+       
+       
+    2: class Settings(BaseModel):
+    1:     model_provider: str = Field(default=DEFAULT_MODEL_PROVIDER)
+    1:     bedrock_model_id: str = Field(default=DEFAULT_BEDROCK_MODEL_ID)
+    1:     model_temperature: float = Field(default=DEFAULT_MODEL_TEMPERATURE)
+    1:     aws_region: str = Field(default="")
+    1:     db_path: str = Field(default="")
+    1:     log_level: str = Field(default="INFO")
+       
+    2:     @property
+    2:     def MODEL_PROVIDER(self) -> str:
+    1:         return self.model_provider
+       
+    2:     @property
+    2:     def BEDROCK_MODEL_ID(self) -> str:
+    1:         return self.bedrock_model_id
+       
+    2:     @property
+    2:     def MODEL_TEMPERATURE(self) -> float:
+    1:         return self.model_temperature
+       
+    2:     @property
+    2:     def DB_PATH(self) -> str:
+    2:         return self.db_path
+       
+    2:     @property
+    2:     def LOG_LEVEL(self) -> str:
+    2:         return self.log_level
+       
+    2:     @property
+    2:     def AWS_REGION(self) -> str:
+    1:         return self.aws_region
+       
+       
+    2: @lru_cache(maxsize=1)
+    2: def get_settings() -> Settings:
+    8:     return Settings(
+    4:         model_provider=_get_env("MODEL_PROVIDER", "model_provider", default=DEFAULT_MODEL_PROVIDER),
+    4:         bedrock_model_id=_get_env("BEDROCK_MODEL_ID", "bedrock_model_id", default=DEFAULT_BEDROCK_MODEL_ID),
+    4:         model_temperature=float(_get_env("MODEL_TEMPERATURE", "model_temperature", default=str(DEFAULT_MODEL_TEMPERATURE)) or DEFAULT_MODEL_TEMPERATURE),
+    4:         aws_region=_get_env("AWS_REGION", "aws_region", default=""),
+    4:         db_path=_get_env("DB_PATH", "db_path", default=""),
+    4:         log_level=(_get_env("LOG_LEVEL", "log_level", default="INFO") or "INFO").upper(),
+           )
+       
+       
+    1: def get_chat_model():
+    7:     from langchain.chat_models import init_chat_model
+       
+    7:     settings = get_settings()
+    7:     if not settings.bedrock_model_id.strip():
+    7:         raise ValueError("BEDROCK_MODEL_ID is not configured")
+       
+>>>>>>     return init_chat_model(
+>>>>>>         settings.bedrock_model_id,
+>>>>>>         model_provider=settings.model_provider,
+>>>>>>         temperature=settings.model_temperature,
+           )
+       
+       
+    2: class FallbackChatModel:
+    1:     def __init__(self, primary_model: Any, fallback_model: Any | None = None):
+    2:         self.primary_model = primary_model
+    2:         self.fallback_model = fallback_model
+       
+    1:     def with_structured_output(self, schema):
+>>>>>>         primary = self.primary_model.with_structured_output(schema)
+>>>>>>         fallback = self.fallback_model.with_structured_output(schema) if self.fallback_model else None
+>>>>>>         return FallbackChatModel(primary, fallback)
+       
+    1:     def invoke(self, *args, **kwargs):
+    2:         try:
+    2:             return self.primary_model.invoke(*args, **kwargs)
+    1:         except Exception as exc:
+    1:             if self.fallback_model and "The provided model identifier is invalid" in str(exc):
+    1:                 return self.fallback_model.invoke(*args, **kwargs)
+>>>>>>             raise
+       
+       
+    1: def build_chat_model_with_fallback():
+    8:     primary_model = get_chat_model()
+    1:     return FallbackChatModel(primary_model, None)

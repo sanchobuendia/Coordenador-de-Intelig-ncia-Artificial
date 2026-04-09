@@ -1,0 +1,294 @@
+    1: from __future__ import annotations
+       
+    1: import logging
+       
+    1: from evaluator.schemas import CriterionScore, ExtractedFacts
+       
+    1: logger = logging.getLogger("evaluator.evaluators")
+       
+    1: WEIGHTS = {"C1": 0.25, "C2": 0.25, "C3": 0.20, "C4": 0.20, "C5": 0.10}
+       
+    1: CRITERIA = [
+    1:     {
+    1:         "id": "C1",
+    1:         "name": "Identificação e compreensão da necessidade",
+    1:         "weight": 25,
+    1:         "relevant_fields": ["lead_profile", "qualification", "flow"],
+    1:         "rubric": "Avalie se o bot entendeu área, objetivo e perfil do lead sem repetição e sem apresentar solução cedo demais. Deduzir -10 por pergunta repetida, -15 por informação assumida sem confirmação, -15 se apresentou curso antes de qualificar, -7 se objetivo não foi identificado e -5 se background/perfil não foi identificado.",
+           },
+    1:     {
+    1:         "id": "C2",
+    1:         "name": "Assertividade da resposta",
+    1:         "weight": 25,
+    1:         "relevant_fields": ["assertiveness"],
+    1:         "rubric": "Avalie se respondeu diretamente às perguntas do lead. Deduzir -20 por pergunta sem resposta, -10 por pergunta desviada e -15 por curso incorreto apresentado.",
+           },
+    1:     {
+    1:         "id": "C3",
+    1:         "name": "Condução e fluxo da conversa",
+    1:         "weight": 20,
+    1:         "relevant_fields": ["flow", "metadata"],
+    1:         "rubric": "Avalie a progressão lógica da conversa. Deduzir -15 por duplicação, -20 por perda de contexto, -20 por curso assumido errado e -10 por input não textual não tratado.",
+           },
+    1:     {
+    1:         "id": "C4",
+    1:         "name": "Conformidade com regras de negócio",
+    1:         "weight": 20,
+    1:         "relevant_fields": ["compliance"],
+    1:         "rubric": "Avalie aderência às regras: não revelar preço, escalar quando preciso, não inventar informação e não usar nome errado. Deduzir -25 por nome errado, -40 por preço revelado, -20 por informação inventada e -30 por falta de escalada necessária.",
+           },
+    1:     {
+    1:         "id": "C5",
+    1:         "name": "Desfecho e encaminhamento",
+    1:         "weight": 10,
+    1:         "relevant_fields": ["resolution"],
+    1:         "rubric": "Avalie se a conversa terminou com resolução, material enviado, CTA claro ou encaminhamento adequado.",
+           },
+       ]
+       
+       
+    1: def _clamp(score: float) -> float:
+   37:     return round(max(0.0, min(100.0, score)), 1)
+       
+       
+    1: def _summarize_deductions(deductions: list[str]) -> str:
+   37:     if not deductions:
+   21:         return "Não houve deduções aplicadas neste critério."
+   16:     return "Deduções aplicadas: " + "; ".join(deductions) + "."
+       
+       
+    1: def _score_c1(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
+    7:     score = 100.0
+    7:     deductions: list[str] = []
+    7:     qualification = facts.qualification
+    7:     flow = facts.flow
+    7:     evidences = [
+    7:         f"lead_area_of_interest: {facts.lead_profile.lead_area_of_interest}",
+    7:         f"lead_background: {facts.lead_profile.lead_background}",
+    7:         f"lead_objective: {facts.lead_profile.lead_objective}",
+    7:         f"qualification_questions_asked: {qualification.qualification_questions_asked}",
+    7:         f"repeated_qualification_questions: {qualification.repeated_qualification_questions}",
+    7:         f"info_assumed_without_confirmation: {qualification.info_assumed_without_confirmation}",
+    7:         f"context_lost_moments: {flow.context_lost_moments}",
+           ]
+    7:     if not qualification.qualification_questions_asked:
+    3:         score -= 40
+    3:         deductions.append("ausência de qualificação: -40pts")
+    7:     for _ in qualification.repeated_qualification_questions:
+>>>>>>         score -= 10
+>>>>>>         deductions.append("pergunta repetida sem motivo: -10pts")
+    8:     for _ in qualification.info_assumed_without_confirmation:
+    1:         score -= 15
+    1:         deductions.append("info assumida sem confirmação: -15pts")
+    7:     if not facts.lead_profile.lead_area_of_interest:
+>>>>>>         score -= 10
+>>>>>>         deductions.append("área de interesse não identificada: -10pts")
+    7:     if not facts.lead_profile.lead_background:
+    1:         score -= 5
+    1:         deductions.append("background do lead não identificado: -5pts")
+    7:     if not facts.lead_profile.lead_objective:
+    3:         score -= 7
+    3:         deductions.append("objetivo do lead não identificado: -7pts")
+   15:     if any("apresentou curso antes de concluir a qualificação" in item for item in flow.context_lost_moments):
+>>>>>>         score -= 15
+>>>>>>         deductions.append("curso apresentado antes da qualificação: -15pts")
+    7:     justification = (
+   35:         "O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. "
+    7:         f"O bot fez {len(qualification.qualification_questions_asked)} perguntas de qualificação, "
+    7:         f"registrou {len(qualification.info_assumed_without_confirmation)} suposições sem confirmação "
+    7:         f"e lead_objective={facts.lead_profile.lead_objective!r}. "
+    7:         f"{_summarize_deductions(deductions)}"
+           )
+   14:     return CriterionScore(
+    7:         criterion_id="C1",
+    7:         criterion_name=criterion["name"],
+    7:         score=_clamp(score),
+    7:         justification=justification,
+    7:         evidences=evidences,
+    7:         deductions=deductions,
+           )
+       
+       
+    1: def _score_c2(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
+    8:     score = 100.0
+    8:     deductions: list[str] = []
+    8:     assertiveness = facts.assertiveness
+    8:     evidences = [
+    8:         f"lead_questions_asked: {assertiveness.lead_questions_asked}",
+    8:         f"unanswered_questions: {assertiveness.unanswered_questions}",
+    8:         f"deflected_questions: {assertiveness.deflected_questions}",
+    8:         f"course_correctly_identified: {assertiveness.course_correctly_identified}",
+           ]
+    8:     for _ in assertiveness.unanswered_questions:
+>>>>>>         score -= 20
+>>>>>>         deductions.append("pergunta sem resposta: -20pts")
+   10:     for _ in assertiveness.deflected_questions:
+    2:         score -= 10
+    2:         deductions.append("pergunta desviada: -10pts")
+    8:     if assertiveness.course_correctly_identified is False:
+    2:         score -= 15
+    2:         deductions.append("curso incorreto apresentado: -15pts")
+    8:     justification = (
+   32:         "O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. "
+    8:         f"Foram identificadas {len(assertiveness.unanswered_questions)} perguntas sem resposta e "
+    8:         f"{len(assertiveness.deflected_questions)} perguntas com deflexão. "
+    8:         f"{_summarize_deductions(deductions)}"
+           )
+   16:     return CriterionScore(
+    8:         criterion_id="C2",
+    8:         criterion_name=criterion["name"],
+    8:         score=_clamp(score),
+    8:         justification=justification,
+    8:         evidences=evidences,
+    8:         deductions=deductions,
+           )
+       
+       
+    1: def _score_c3(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
+    7:     score = 100.0
+    7:     deductions: list[str] = []
+    7:     flow = facts.flow
+    7:     evidences = [
+    7:         f"duplicate_bot_messages: {flow.duplicate_bot_messages}",
+    7:         f"context_lost_moments: {flow.context_lost_moments}",
+    7:         f"wrong_course_assumed: {flow.wrong_course_assumed}",
+    7:         f"non_text_input_handled: {flow.non_text_input_handled}",
+    7:         f"flow_progression: {flow.flow_progression}",
+           ]
+    8:     for _ in flow.duplicate_bot_messages:
+    1:         score -= 15
+    1:         deductions.append("mensagem duplicada: -15pts")
+    8:     for _ in flow.context_lost_moments:
+    1:         score -= 20
+    1:         deductions.append("perda de contexto: -20pts")
+    7:     if flow.wrong_course_assumed:
+    2:         score -= 20
+    2:         deductions.append("curso assumido antes de confirmação: -20pts")
+    7:     if flow.non_text_input_received and flow.non_text_input_handled is False:
+>>>>>>         score -= 10
+>>>>>>         deductions.append("input não textual não tratado: -10pts")
+    7:     if not flow.flow_progression:
+>>>>>>         score -= 25
+>>>>>>         deductions.append("conversa sem progressão clara: -25pts")
+    7:     justification = (
+   28:         "O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. "
+    7:         f"A conversa passou por {len(flow.flow_progression)} etapas e registrou "
+    7:         f"{len(deductions)} deduções relevantes de fluxo. "
+    7:         f"{_summarize_deductions(deductions)}"
+           )
+   14:     return CriterionScore(
+    7:         criterion_id="C3",
+    7:         criterion_name=criterion["name"],
+    7:         score=_clamp(score),
+    7:         justification=justification,
+    7:         evidences=evidences,
+    7:         deductions=deductions,
+           )
+       
+       
+    1: def _score_c4(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
+    8:     score = 100.0
+    8:     deductions: list[str] = []
+    8:     compliance = facts.compliance
+    8:     evidences = [
+    8:         f"bot_greeted_lead_as: {compliance.bot_greeted_lead_as}",
+    8:         f"name_mismatch: {compliance.name_mismatch}",
+    8:         f"price_revealed_directly: {compliance.price_revealed_directly}",
+    8:         f"invented_information: {compliance.invented_information}",
+    8:         f"honest_when_uninformed: {compliance.honest_when_uninformed}",
+           ]
+    8:     if compliance.name_mismatch:
+    2:         score -= 25
+    2:         deductions.append("nome errado do lead: -25pts")
+    8:     if compliance.price_revealed_directly:
+>>>>>>         score -= 40
+>>>>>>         deductions.append("preço revelado diretamente: -40pts")
+    9:     for _ in compliance.invented_information:
+    1:         score -= 20
+    1:         deductions.append("informação inventada/sem base: -20pts")
+    8:     if compliance.price_asked_by_lead and not compliance.price_revealed_directly and not compliance.escalation_triggered:
+>>>>>>         score -= 30
+>>>>>>         deductions.append("não escalou quando devia: -30pts")
+    8:     justification = (
+   32:         "O critério verifica aderência às políticas comerciais e de personalização. "
+    8:         f"Foram observadas {len(compliance.invented_information)} informações possivelmente inventadas "
+    8:         f"e name_mismatch={compliance.name_mismatch}. "
+    8:         f"{_summarize_deductions(deductions)}"
+           )
+   16:     return CriterionScore(
+    8:         criterion_id="C4",
+    8:         criterion_name=criterion["name"],
+    8:         score=_clamp(score),
+    8:         justification=justification,
+    8:         evidences=evidences,
+    8:         deductions=deductions,
+           )
+       
+       
+    1: def _score_c5(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
+    7:     resolution = facts.resolution
+    7:     evidences = [
+    7:         f"resolution_status: {resolution.resolution_status}",
+    7:         f"material_sent: {resolution.material_sent}",
+    7:         f"cta_present: {resolution.cta_present}",
+    7:         f"last_message_sender: {resolution.last_message_sender}",
+           ]
+    7:     deductions: list[str] = []
+    7:     resolution_scores = {
+    7:         "escalated": 95.0,
+    7:         "material_sent": 90.0 if resolution.cta_present else 78.0,
+    7:         "resolved_in_chat": 85.0,
+    7:         "pending": 55.0,
+    7:         "dropped": 25.0,
+           }
+    7:     score = resolution_scores[resolution.resolution_status]
+    7:     if resolution.resolution_status == "pending":
+    1:         if resolution.material_sent and resolution.cta_present:
+    1:             score = 72.0
+>>>>>>         elif resolution.material_sent or resolution.cta_present:
+>>>>>>             score = 60.0
+    7:     if resolution.resolution_status == "pending":
+    1:         if resolution.material_sent and resolution.cta_present:
+    1:             deductions.append("status pending com material enviado e CTA presente: faixa 70-79")
+>>>>>>         elif resolution.material_sent or resolution.cta_present:
+>>>>>>             deductions.append("status pending com encaminhamento parcial: faixa 50-69")
+               else:
+>>>>>>             deductions.append("conversa sem resolução clara: -45pts")
+    7:     if resolution.resolution_status == "dropped":
+    1:         deductions.append("sessão encerrada abruptamente: -75pts")
+    7:     justification = (
+   21:         "O desfecho foi avaliado pelo encaminhamento final, envio de material e presença de CTA. "
+    7:         f"O status final identificado foi '{resolution.resolution_status}'. "
+    7:         f"{_summarize_deductions(deductions)}"
+           )
+   14:     return CriterionScore(
+    7:         criterion_id="C5",
+    7:         criterion_name=criterion["name"],
+    7:         score=_clamp(score),
+    7:         justification=justification,
+    7:         evidences=evidences,
+    7:         deductions=deductions,
+           )
+       
+       
+    1: def heuristic_evaluate(criterion: dict, facts: ExtractedFacts) -> CriterionScore:
+   37:     handlers = {
+   37:         "C1": _score_c1,
+   37:         "C2": _score_c2,
+   37:         "C3": _score_c3,
+   37:         "C4": _score_c4,
+   37:         "C5": _score_c5,
+           }
+   37:     return handlers[criterion["id"]](facts, criterion)
+       
+       
+    1: def run_evaluator(state: dict) -> dict:
+   35:     criterion = state["criterion"]
+   35:     facts = state["extracted_facts"]
+   35:     session_id = facts.metadata.session_id
+   35:     logger.info("[%s] Avaliando critério %s", session_id, criterion["id"])
+   35:     logger.debug("[%s] Critério %s via regra determinística", session_id, criterion["id"])
+   35:     score = heuristic_evaluate(criterion, facts)
+   35:     logger.info("[%s] Critério %s concluído com score %.1f", session_id, criterion["id"], score.score)
+   35:     logger.debug("[%s] Critério %s detalhes: %s", session_id, criterion["id"], score.model_dump(mode="json"))
+   35:     return {"criterion_scores": [score]}

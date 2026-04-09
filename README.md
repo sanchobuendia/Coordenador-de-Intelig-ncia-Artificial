@@ -122,6 +122,7 @@ Resposta completa observada:
     "evaluated_at": "2026-04-09T17:35:49Z",
     "score_final": 99,
     "classification": "excelente",
+    "executive_summary": "Atendimento muito bem conduzido, com qualificação adequada do lead, oferta aderente ao interesse em IA aplicada à cibersegurança e bom nível de personalização. Não foram identificadas falhas de conformidade, perda de contexto ou respostas desviadas ao longo da conversa. O caso terminou com envio de material e CTA claro para próximos passos, o que sustenta avaliação excelente, embora sem um fechamento comercial mais conclusivo.",
     "scores": {
       "C1": {
         "criterion_id": "C1",
@@ -286,3 +287,19 @@ Resposta completa observada:
 ```bash
 pytest tests/ -v
 ```
+
+## Docker
+
+Build da imagem:
+
+```bash
+docker build -t conversation-quality-evaluator .
+```
+
+Subida da API:
+
+```bash
+docker run --rm -p 8000:8000 --env-file .env conversation-quality-evaluator
+```
+
+Se quiser subir sem arquivo `.env`, passe as variaveis necessarias com `-e`, por exemplo `BEDROCK_MODEL_ID`, `AWS_REGION`, `MODEL_PROVIDER`, `MODEL_TEMPERATURE`, `DB_PATH` e `LOG_LEVEL`.

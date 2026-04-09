@@ -1,0 +1,7 @@
+    1: from __future__ import annotations
+       
+    1: from evaluator.prompts.extractor import EXTRACTOR_PROMPT
+       
+    1: __all__ = [
+    1:     "EXTRACTOR_PROMPT",
+       ]
