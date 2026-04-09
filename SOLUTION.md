@@ -222,6 +222,12 @@ Em producao, eu operaria o sistema com quatro camadas:
 - storage de traces e checkpoints
 - monitoramento de qualidade e custo
 
+Exemplo de observabilidade do prototipo no LangSmith:
+
+![Trace do LangSmith com concentracao de latencia e tokens no extrator](images/langsmith.png)
+
+O print acima reforca uma decisao importante deste MVP: o principal consumo de tokens e tempo de resposta esta no extrator LLM, enquanto scoring e sintese deterministica tem custo marginal. Isso ajuda a orientar as proximas otimizacoes de custo e latencia no ponto correto do pipeline.
+
 Metricas importantes:
 
 - latencia por etapa
