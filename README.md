@@ -99,16 +99,22 @@ Exemplo real de requisicao enviada ao endpoint `POST /evaluate`:
 ```json
 {
   "messages": [
-    "human: Eu sou Pessoa_006",
-    "ai: Olá, Pessoa_006, eu sou a Beatriz, consultora de carreira da +A Code Academy. Vi que você tem interesse em uma pós-graduação. Me conta: você já tem um curso em mente?",
-    "human: Reposta da mensagem:  Olá! Ficamos muito felizes pelo seu interesse na Pós +A Code Academy Digital. 😊\n\nSou consultora de carreiras e estou aqui para garantir que esta experiência seja incrível desde o seu início.\n\nEstou à disposição para auxiliar com tudo que você precisa saber sobre a nossa pós-graduação, ok?\n\n*Para já iniciarmos, que tal você me falar qual é a sua formação acadêmica?* 🤔 Resposta:  Possuo graduação em Redes de Computadores e estou graduando em Defesa Cibernética",
-    "ai: Entendi, você já tem uma base sólida em tecnologia e segurança da informação. Pensando na sua carreira, você busca uma especialização para crescer na área técnica mesmo ou pensa em migrar para funções de gestão e liderança?",
-    "human: Reposta da mensagem:  Olá, Pessoa_006, eu sou a Beatriz, consultora de carreira da +A Code Academy. Vi que você tem interesse em uma pós-graduação. Me conta: você já tem um curso em mente? Resposta:  Me interesso por IA aplicada em Cybersecurity",
-    "ai: Ótima escolha! O curso \"IA e Cibersegurança: Automação e Eficiência para Segurança Digital\" é voltado justamente para profissionais que querem aplicar Inteligência Artificial em defesa cibernética e automação de processos de segurança. Você verá conteúdos sobre antecipação de riscos, automação de defesas, detecção de vulnerabilidades e respostas estratégicas a ameaças digitais.\nVou te passar um diferencial exclusivo para você se matricular na nossa Escola de IA! Não é apenas um curso, você fará parte de um ecossistema vivo de aprendizagem:\n✔️ Comunidade ativa com trocas reais\n✔️ Desafios práticos para aplicar IA na prática\n✔️ Entrevistas com especialistas do mercado\n✔️ Atualizações frequentes sobre as transformações da IA\n✔️ Curadoria Exclusiva de Ferramentas de IA, Agentes, prompts e tutoriais para o seu dia a dia profissional\nDepois de conferir o material, posso te explicar como funciona a matrícula e as próximas etapas. Posso te ajudar agora mesmo a seguir com sua inscrição?",
-    "human: Sim, quero saber mais",
-    "ai: Aqui estão mais informações sobre o curso, conforme solicitado:\n\n✔️ 100% online –  sem encontros presenciais\n✔️ Duração de 10 meses, com acesso liberado por até 24 meses\n✔️ Carga horária total de 360h\n✔️ Estrutura com 12 disciplinas (5 aulas em cada disciplina + 1 avaliação online por módulo)\n✔️ Ao final, você realiza um Projeto de Aplicação prático de 72h, no lugar do TCC tradicional.\n🧑‍🏫 Cada disciplina terá:\n\n— 3 aulas gravadas, com professores que são referência de mercado, trazendo conteúdo direto ao ponto.\n— 2 aulas ao vivo, com especialistas da +A Code Academy — ótimas oportunidades pra tirar dúvidas, trocar experiências e até interagir com colegas da área.\n📌 E se não conseguir assistir ao vivo, tudo bem!\nAs aulas ficam gravadas pra você acessar quando e quantas vezes quiser, no seu ritmo.\n\nAs aulas ao vivo vão ocorrer as quartas-feiras, das 19h30 as 21h.\nVocê irá visualizar o Calendário Acadêmico na plataforma para verificar as datas das aulas ao vivo e se programar para assistir caso desejar.\n🎓 O certificado é com titularidade de especialista Lato Sensu reconhecido pelo MEC, emitido como presencial sem menções de digital, online ou EAD.\n\nAcesse a apresentação completa da pós pelo PDF: [Ver PDF do curso](https://lead-recovery-99[TELEFONE].s3.us-east-1.amazonaws.com/conteudo-rag/13873/PDF/IA%20e%20Ciberseguran%C3%A7a.pdf)\n\nFicou com alguma dúvida ou gostaria de saber detalhes específicos do curso? Me avise para eu te ajudar nas próximas etapas!"
+    "human: Eu sou Pessoa_002",
+    "ai: Olá, Pessoa_002! Eu sou a Beatriz, consultora de carreira da +A Code Academy. Vi que você tem interesse em uma pós-graduação. Você já tem algum curso em mente ou gostaria de ajuda para escolher?",
+    "human: Dentro de Ed inclusiva",
+    "ai: Entendi seu interesse em abordar temas de educação inclusiva. Temos uma pós em \"TEA, TDAH e Inclusão: Saúde, Família e Sociedade\", que pode ser relevante para esse campo.\nPosso te perguntar qual sua área de formação ou atuação para entender como essa especialização pode ajudar nos seus objetivos?",
+    "human: Reposta da mensagem:  Entendi seu interesse em abordar temas de educação inclusiva. Temos uma pós em \"TEA, TDAH e Inclusão: Saúde, Família e Sociedade\", que pode ser relevante para esse campo. Resposta:  Sim",
+    "human: Sou diretora escolar",
+    "ai: Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva? Assim consigo te direcionar melhor.",
+    "human: Pedagogia \nPós em educação brasileira \nMBA em gestão escolar",
+    "ai: Ótimo saber que você é diretora escolar! Muitos profissionais de gestão na educação buscam essa especialização para promover práticas mais inclusivas nas escolas.\nTem algum desafio específico ou objetivo que te motivou a buscar o curso de TEA, TDAH e Inclusão?",
+    "human: Reposta da mensagem:  Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva? Assim consigo te direcionar melhor. Resposta:  Não . Sim para o interesse nesse curso",
+    "ai: Sua formação é uma base sólida para liderar ações de inclusão escolar. A pós em TEA, TDAH e Inclusão: Saúde, Família e Sociedade aprofunda o olhar sobre políticas inclusivas, a integração de talentos neurodiversos, e prepara gestores para construir estratégias efetivas junto a equipes e famílias.\nVeja o vídeo de apresentação e acesse o material completo do curso nos links abaixo:\nSe quiser, posso te orientar para os próximos passos e os detalhes da matrícula. Posso prosseguir com seu cadastro ou prefere tirar alguma dúvida pontual sobre o programa?",
+    "ai: Ótimo, já entendi que seu interesse é direcionado ao curso TEA, TDAH e Inclusão: Saúde, Família e Sociedade. Essa pós-graduação trabalha temas como neurodesenvolvimento, políticas públicas de inclusão, estratégias para integração de alunos neurodivergentes e o papel da família e da escola, sempre priorizando a construção de uma cultura inclusiva na gestão escolar.\nVocê pode conhecer detalhes da estrutura e forma de aplicação do curso neste vídeo de apresentação.\nE conferir a grade curricular e informações em PDF.\nSe quiser seguir para inscrição ou tirar dúvidas pontuais sobre valor, prazo ou formas de ingresso, me avise que já te passo as próximas orientações.",
+    "human: Estou no trânsito agora . Chegando no trabalho vejo o vídeo e te chamo aqui",
+    "ai: Perfeito, fique à vontade para assistir ao vídeo quando conseguir! Assim que estiver pronta, é só me chamar aqui para conversarmos sobre dúvidas ou sobre o processo de matrícula. Deixo aberto para avançarmos juntos quando for o melhor momento para você."
   ],
-  "sessionId": "S_cb815acbtt1"
+  "sessionId": "S_cb815acbt33"
 }
 ```
 
@@ -118,27 +124,29 @@ Resposta completa observada:
 {
   "success": true,
   "data": {
-    "session_id": "S_cb815acbtt1",
-    "evaluated_at": "2026-04-09T17:35:49Z",
-    "score_final": 99,
+    "session_id": "S_cb815acbt33",
+    "evaluated_at": "2026-04-09T18:14:59Z",
+    "score_final": 90.5,
     "classification": "excelente",
-    "executive_summary": "Atendimento muito bem conduzido, com qualificação adequada do lead, oferta aderente ao interesse em IA aplicada à cibersegurança e bom nível de personalização. Não foram identificadas falhas de conformidade, perda de contexto ou respostas desviadas ao longo da conversa. O caso terminou com envio de material e CTA claro para próximos passos, o que sustenta avaliação excelente, embora sem um fechamento comercial mais conclusivo.",
+    "executive_summary": "O atendimento alcançou score de 90,5 pontos com classificação excelente. Os principais pontos fortes foram a assertividade perfeita na resposta às dúvidas do lead, total conformidade com regras de negócio e qualificação bem estruturada com 4 perguntas relevantes que mapearam corretamente o perfil de uma diretora escolar buscando especialização em TEA, TDAH e inclusão. Como pontos de atenção, o bot fez uma suposição sem confirmação sobre a aplicação profissional do conhecimento e enviou duas mensagens duplicadas consecutivas, impactando levemente o fluxo da conversa. O atendimento permanece em status pendente com material enviado e call-to-action presente, aguardando o retorno do lead após assistir ao vídeo apresentado.",
     "scores": {
       "C1": {
         "criterion_id": "C1",
         "criterion_name": "Identificação e compreensão da necessidade",
-        "score": 100,
-        "justification": "O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 2 perguntas de qualificação, registrou 0 suposições sem confirmação e lead_objective='Aplicar Inteligência Artificial em defesa cibernética e automação de processos de segurança'. Não houve deduções aplicadas neste critério.",
+        "score": 85,
+        "justification": "O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 4 perguntas de qualificação, registrou 1 suposições sem confirmação e lead_objective='Aprofundar conhecimento em TEA, TDAH e inclusão para promover práticas inclusivas nas escolas'. Deduções aplicadas: info assumida sem confirmação: -15pts.",
         "evidences": [
-          "lead_area_of_interest: IA aplicada em Cybersecurity",
-          "lead_background: Graduação em Redes de Computadores. Graduando em Defesa Cibernética.",
-          "lead_objective: Aplicar Inteligência Artificial em defesa cibernética e automação de processos de segurança",
-          "qualification_questions_asked: ['você já tem um curso em mente?', 'você busca uma especialização para crescer na área técnica mesmo ou pensa em migrar para funções de gestão e liderança?']",
+          "lead_area_of_interest: Educação inclusiva",
+          "lead_background: Diretora escolar. Formação: Pedagogia, Pós em educação brasileira, MBA em gestão escolar",
+          "lead_objective: Aprofundar conhecimento em TEA, TDAH e inclusão para promover práticas inclusivas nas escolas",
+          "qualification_questions_asked: ['Você já tem algum curso em mente ou gostaria de ajuda para escolher?', 'Posso te perguntar qual sua área de formação ou atuação para entender como essa especialização pode ajudar nos seus objetivos?', \"Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva?\", 'Tem algum desafio específico ou objetivo que te motivou a buscar o curso de TEA, TDAH e Inclusão?']",
           "repeated_qualification_questions: []",
-          "info_assumed_without_confirmation: []",
+          "info_assumed_without_confirmation: ['Bot assumiu que o lead buscava especialização em educação inclusiva sem confirmar se era para aplicação profissional ou pessoal']",
           "context_lost_moments: []"
         ],
-        "deductions": []
+        "deductions": [
+          "info assumida sem confirmação: -15pts"
+        ]
       },
       "C2": {
         "criterion_id": "C2",
@@ -146,7 +154,7 @@ Resposta completa observada:
         "score": 100,
         "justification": "O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. Foram identificadas 0 perguntas sem resposta e 0 perguntas com deflexão. Não houve deduções aplicadas neste critério.",
         "evidences": [
-          "lead_questions_asked: ['Sim, quero saber mais']",
+          "lead_questions_asked: []",
           "unanswered_questions: []",
           "deflected_questions: []",
           "course_correctly_identified: True"
@@ -156,16 +164,18 @@ Resposta completa observada:
       "C3": {
         "criterion_id": "C3",
         "criterion_name": "Condução e fluxo da conversa",
-        "score": 100,
-        "justification": "O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. A conversa passou por 10 etapas e registrou 0 deduções relevantes de fluxo. Não houve deduções aplicadas neste critério.",
+        "score": 85,
+        "justification": "O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. A conversa passou por 11 etapas e registrou 1 deduções relevantes de fluxo. Deduções aplicadas: mensagem duplicada: -15pts.",
         "evidences": [
-          "duplicate_bot_messages: []",
+          "duplicate_bot_messages: ['Bot enviou duas mensagens consecutivas sobre o curso TEA, TDAH e Inclusão sem mensagem do lead entre elas (mensagens 5 e 6)']",
           "context_lost_moments: []",
           "wrong_course_assumed: False",
           "non_text_input_handled: None",
-          "flow_progression: ['Bot saudou lead e mencionou interesse em pós-graduação', 'Bot perguntou se lead tinha curso em mente', 'Lead informou formação acadêmica (Redes de Computadores e Defesa Cibernética)', 'Bot qualificou objetivo de carreira (técnico vs gestão)', 'Lead expressou interesse em IA aplicada em Cybersecurity', 'Bot apresentou curso específico: IA e Cibersegurança', 'Bot descreveu diferenciais e ecossistema de aprendizagem', 'Bot ofereceu CTA para matrícula', 'Lead respondeu positivamente pedindo mais informações', 'Bot forneceu detalhes completos do curso e link para PDF']"
+          "flow_progression: ['Saudação e identificação do interesse geral em pós-graduação', 'Lead menciona interesse em educação inclusiva', 'Bot apresenta curso específico: TEA, TDAH e Inclusão', 'Bot qualifica formação e atuação do lead', 'Lead confirma formação: Pedagogia, Pós em educação brasileira, MBA em gestão escolar', 'Bot qualifica objetivo específico do lead', 'Bot apresenta material do curso (vídeo e PDF)', 'Bot oferece próximos passos (cadastro ou dúvidas)', 'Bot reforça apresentação do curso com detalhes adicionais', 'Lead informa que está em trânsito e assistirá ao vídeo depois', 'Bot confirma disponibilidade para continuar quando o lead retornar']"
         ],
-        "deductions": []
+        "deductions": [
+          "mensagem duplicada: -15pts"
+        ]
       },
       "C4": {
         "criterion_id": "C4",
@@ -184,73 +194,80 @@ Resposta completa observada:
       "C5": {
         "criterion_id": "C5",
         "criterion_name": "Desfecho e encaminhamento",
-        "score": 90,
-        "justification": "O desfecho foi avaliado pelo encaminhamento final, envio de material e presença de CTA. O status final identificado foi 'material_sent'. Não houve deduções aplicadas neste critério.",
+        "score": 72,
+        "justification": "O desfecho foi avaliado pelo encaminhamento final, envio de material e presença de CTA. O status final identificado foi 'pending'. Deduções aplicadas: status pending com material enviado e CTA presente: faixa 70-79.",
         "evidences": [
-          "resolution_status: material_sent",
+          "resolution_status: pending",
           "material_sent: True",
           "cta_present: True",
           "last_message_sender: bot"
         ],
-        "deductions": []
+        "deductions": [
+          "status pending com material enviado e CTA presente: faixa 70-79"
+        ]
       }
     },
     "extracted_facts": {
       "metadata": {
-        "session_id": "Pessoa_006",
-        "total_turns": 8,
-        "lead_turn_count": 4,
-        "bot_turn_count": 4
+        "session_id": "Pessoa_002",
+        "total_turns": 12,
+        "lead_turn_count": 6,
+        "bot_turn_count": 6
       },
       "lead_profile": {
-        "lead_name_informed": "Pessoa_006",
-        "lead_area_of_interest": "IA aplicada em Cybersecurity",
-        "lead_background": "Graduação em Redes de Computadores. Graduando em Defesa Cibernética.",
-        "lead_objective": "Aplicar Inteligência Artificial em defesa cibernética e automação de processos de segurança",
+        "lead_name_informed": "Pessoa_002",
+        "lead_area_of_interest": "Educação inclusiva",
+        "lead_background": "Diretora escolar. Formação: Pedagogia, Pós em educação brasileira, MBA em gestão escolar",
+        "lead_objective": "Aprofundar conhecimento em TEA, TDAH e inclusão para promover práticas inclusivas nas escolas",
         "lead_already_works_in_area": true
       },
       "qualification": {
         "qualification_questions_asked": [
-          "você já tem um curso em mente?",
-          "você busca uma especialização para crescer na área técnica mesmo ou pensa em migrar para funções de gestão e liderança?"
+          "Você já tem algum curso em mente ou gostaria de ajuda para escolher?",
+          "Posso te perguntar qual sua área de formação ou atuação para entender como essa especialização pode ajudar nos seus objetivos?",
+          "Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva?",
+          "Tem algum desafio específico ou objetivo que te motivou a buscar o curso de TEA, TDAH e Inclusão?"
         ],
         "repeated_qualification_questions": [],
-        "info_assumed_without_confirmation": []
+        "info_assumed_without_confirmation": [
+          "Bot assumiu que o lead buscava especialização em educação inclusiva sem confirmar se era para aplicação profissional ou pessoal"
+        ]
       },
       "assertiveness": {
-        "lead_questions_asked": [
-          "Sim, quero saber mais"
-        ],
+        "lead_questions_asked": [],
         "unanswered_questions": [],
         "deflected_questions": [],
         "course_correctly_identified": true,
         "course_presented": [
-          "IA e Cibersegurança: Automação e Eficiência para Segurança Digital"
+          "TEA, TDAH e Inclusão: Saúde, Família e Sociedade"
         ],
         "course_not_found": false
       },
       "flow": {
-        "duplicate_bot_messages": [],
+        "duplicate_bot_messages": [
+          "Bot enviou duas mensagens consecutivas sobre o curso TEA, TDAH e Inclusão sem mensagem do lead entre elas (mensagens 5 e 6)"
+        ],
         "context_lost_moments": [],
         "wrong_course_assumed": false,
         "wrong_course_assumed_evidence": null,
         "non_text_input_received": false,
         "non_text_input_handled": null,
         "flow_progression": [
-          "Bot saudou lead e mencionou interesse em pós-graduação",
-          "Bot perguntou se lead tinha curso em mente",
-          "Lead informou formação acadêmica (Redes de Computadores e Defesa Cibernética)",
-          "Bot qualificou objetivo de carreira (técnico vs gestão)",
-          "Lead expressou interesse em IA aplicada em Cybersecurity",
-          "Bot apresentou curso específico: IA e Cibersegurança",
-          "Bot descreveu diferenciais e ecossistema de aprendizagem",
-          "Bot ofereceu CTA para matrícula",
-          "Lead respondeu positivamente pedindo mais informações",
-          "Bot forneceu detalhes completos do curso e link para PDF"
+          "Saudação e identificação do interesse geral em pós-graduação",
+          "Lead menciona interesse em educação inclusiva",
+          "Bot apresenta curso específico: TEA, TDAH e Inclusão",
+          "Bot qualifica formação e atuação do lead",
+          "Lead confirma formação: Pedagogia, Pós em educação brasileira, MBA em gestão escolar",
+          "Bot qualifica objetivo específico do lead",
+          "Bot apresenta material do curso (vídeo e PDF)",
+          "Bot oferece próximos passos (cadastro ou dúvidas)",
+          "Bot reforça apresentação do curso com detalhes adicionais",
+          "Lead informa que está em trânsito e assistirá ao vídeo depois",
+          "Bot confirma disponibilidade para continuar quando o lead retornar"
         ]
       },
       "compliance": {
-        "bot_greeted_lead_as": "Pessoa_006",
+        "bot_greeted_lead_as": "Pessoa_002",
         "name_mismatch": false,
         "price_asked_by_lead": false,
         "price_revealed_directly": false,
@@ -269,14 +286,14 @@ Resposta completa observada:
       }
     },
     "strengths": [
-      "C1 com score 100.0: O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 2 perguntas de qualificação, registrou 0 suposições sem confirmação e lead_objective='Aplicar Inteligência Artificial em defesa cibernética e automação de processos de segurança'. Não houve deduções aplicadas neste critério.",
       "C2 com score 100.0: O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. Foram identificadas 0 perguntas sem resposta e 0 perguntas com deflexão. Não houve deduções aplicadas neste critério.",
-      "C3 com score 100.0: O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. A conversa passou por 10 etapas e registrou 0 deduções relevantes de fluxo. Não houve deduções aplicadas neste critério."
+      "C4 com score 100.0: O critério verifica aderência às políticas comerciais e de personalização. Foram observadas 0 informações possivelmente inventadas e name_mismatch=False. Não houve deduções aplicadas neste critério.",
+      "C1 com score 85.0: O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 4 perguntas de qualificação, registrou 1 suposições sem confirmação e lead_objective='Aprofundar conhecimento em TEA, TDAH e inclusão para promover práticas inclusivas nas escolas'. Deduções aplicadas: info assumida sem confirmação: -15pts."
     ],
     "improvement_areas": [
-      "C5: aprofundar o critério 'Desfecho e encaminhamento'.",
-      "C1: aprofundar o critério 'Identificação e compreensão da necessidade'.",
-      "C2: aprofundar o critério 'Assertividade da resposta'."
+      "C5: corrigir status pending com material enviado e CTA presente: faixa 70-79",
+      "C1: corrigir info assumida sem confirmação: -15pts",
+      "C3: corrigir mensagem duplicada: -15pts"
     ]
   }
 }

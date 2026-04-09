@@ -206,6 +206,8 @@ Para demonstrar o comportamento do MVP, foi executado um caso de atendimento em 
 - informou o nome como `Pessoa_006`
 - declarou formacao em Redes de Computadores e graduacao em Defesa Cibernetica
 - explicitou interesse em `IA aplicada em Cybersecurity`
+ 
+Observacao: o exemplo mais recente do `README.md` foi atualizado para um caso real de educacao inclusiva, com resposta completa do sistema. Os pontos abaixo permanecem apenas como ilustracao resumida do comportamento do prototipo e nao como copia literal do exemplo operacional documentado.
 
 Resultado observado:
 
