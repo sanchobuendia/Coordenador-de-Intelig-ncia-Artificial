@@ -1,0 +1,14 @@
+    1: from __future__ import annotations
+       
+    1: import operator
+    1: from typing import Annotated, TypedDict
+       
+    1: from evaluator.schemas import CriterionScore, EvaluationReport, ExtractedFacts
+       
+       
+    2: class GraphState(TypedDict, total=False):
+    1:     conversation: str
+    1:     session_id: str
+    1:     extracted_facts: ExtractedFacts
+    1:     criterion_scores: Annotated[list[CriterionScore], operator.add]
+    1:     report: EvaluationReport

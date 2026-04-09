@@ -118,6 +118,7 @@ class EvaluationReport(BaseModel):
     evaluated_at: str
     score_final: float = Field(ge=0.0, le=100.0)
     classification: Classification
+    executive_summary: str = ""
     scores: dict[str, CriterionScore]
     extracted_facts: ExtractedFacts
     strengths: list[str] = Field(default_factory=list)

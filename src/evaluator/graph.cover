@@ -1,0 +1,79 @@
+    1: from __future__ import annotations
+       
+    1: from contextlib import asynccontextmanager, contextmanager
+       
+    1: from langgraph.constants import Send
+    1: from langgraph.graph import END, StateGraph
+    1: from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+       
+    1: from evaluator.config import get_settings
+    1: from evaluator.nodes.evaluators import CRITERIA, run_evaluator
+    1: from evaluator.nodes.extractor import run_extractor
+    1: from evaluator.nodes.synthesizer import run_synthesizer
+    1: from evaluator.state import GraphState
+       
+    1: ALLOWED_MSGPACK_MODULES = [
+           ("evaluator.schemas", "EvaluationReport"),
+           ("evaluator.schemas", "ExtractedFacts"),
+           ("evaluator.schemas", "CriterionScore"),
+       ]
+       
+       
+    1: def route_to_evaluators(state: GraphState) -> list[Send]:
+  104:     return [
+   40:         Send("evaluator", {"criterion": criterion, "extracted_facts": state["extracted_facts"]})
+   48:         for criterion in CRITERIA
+           ]
+       
+       
+    1: def build_graph() -> StateGraph:
+    3:     builder = StateGraph(GraphState)
+    3:     builder.add_node("extractor", run_extractor)
+    3:     builder.add_node("evaluator", run_evaluator)
+    3:     builder.add_node("synthesizer", run_synthesizer)
+    3:     builder.set_entry_point("extractor")
+    3:     builder.add_conditional_edges("extractor", route_to_evaluators, ["evaluator"])
+    3:     builder.add_edge("evaluator", "synthesizer")
+    3:     builder.add_edge("synthesizer", END)
+    3:     return builder
+       
+       
+    1: def compile_graph(checkpointer=None):
+    3:     return build_graph().compile(checkpointer=checkpointer)
+       
+       
+    1: def build_checkpoint_serde() -> JsonPlusSerializer:
+    1:     return JsonPlusSerializer(allowed_msgpack_modules=ALLOWED_MSGPACK_MODULES)
+       
+       
+    2: @contextmanager
+    2: def persistent_graph():
+    1:     settings = get_settings()
+    1:     db_path = settings.DB_PATH.strip()
+    1:     if not db_path:
+    1:         yield compile_graph()
+    1:         return
+       
+>>>>>>     from langgraph.checkpoint.postgres import PostgresSaver
+       
+>>>>>>     with PostgresSaver.from_conn_string(db_path, serde=build_checkpoint_serde()) as checkpointer:
+>>>>>>         checkpointer.setup()
+>>>>>>         yield compile_graph(checkpointer=checkpointer)
+       
+       
+    2: @asynccontextmanager
+    2: async def apersistent_graph():
+>>>>>>     settings = get_settings()
+>>>>>>     db_path = settings.DB_PATH.strip()
+>>>>>>     if not db_path:
+>>>>>>         yield compile_graph()
+>>>>>>         return
+       
+>>>>>>     from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+       
+>>>>>>     async with AsyncPostgresSaver.from_conn_string(db_path, serde=build_checkpoint_serde()) as checkpointer:
+>>>>>>         await checkpointer.setup()
+>>>>>>         yield compile_graph(checkpointer=checkpointer)
+       
+       
+    1: graph = compile_graph()

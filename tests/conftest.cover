@@ -1,0 +1,10 @@
+    1: import os
+       
+    1: from evaluator.config import get_settings
+       
+       
+    1: os.environ["LANGSMITH_TRACING"] = "false"
+    1: os.environ["DB_PATH"] = ""
+    1: os.environ["BEDROCK_MODEL_ID"] = ""
+       
+    1: get_settings.cache_clear()

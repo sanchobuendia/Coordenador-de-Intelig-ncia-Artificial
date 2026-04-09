@@ -1,0 +1,30 @@
+    1: from evaluator.nodes.evaluators import CRITERIA, heuristic_evaluate
+    1: from evaluator.nodes.extractor import heuristic_extract
+       
+       
+    1: def build_facts(conversation: str, session_id: str = "S_test"):
+    2:     return heuristic_extract({"session_id": session_id, "conversation": conversation})
+       
+       
+    1: def criterion_by_id(criterion_id: str) -> dict:
+    8:     return next(item for item in CRITERIA if item["id"] == criterion_id)
+       
+       
+    1: def test_c4_deducts_wrong_name():
+    2:     facts = build_facts(
+    1:         "human: Eu sou Pessoa_015\n"
+               "ai: Olá, Karina! Como posso ajudar?\n"
+               "human: Quero uma pós em saúde mental.\n"
+               "ai: Posso te encaminhar."
+           )
+    1:     score = heuristic_evaluate(criterion_by_id("C4"), facts)
+    1:     assert "nome errado do lead: -25pts" in score.deductions
+       
+       
+    1: def test_c2_detects_deflected_question():
+    2:     facts = build_facts(
+    1:         "human: Em qual dia da semana são as aulas ao vivo?\n"
+               "ai: Elas acontecem das 19h30 às 21h."
+           )
+    1:     score = heuristic_evaluate(criterion_by_id("C2"), facts)
+    1:     assert "pergunta desviada: -10pts" in score.deductions

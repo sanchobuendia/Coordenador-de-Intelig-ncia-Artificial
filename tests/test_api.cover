@@ -1,0 +1,38 @@
+    1: from fastapi.testclient import TestClient
+       
+    1: from api.main import app
+       
+       
+    1: client = TestClient(app)
+       
+       
+    1: def test_health():
+    1:     response = client.get("/health")
+    1:     assert response.status_code == 200
+    1:     assert response.json() == {"status": "ok"}
+       
+       
+    1: def test_evaluate_endpoint():
+    2:     response = client.post(
+    1:         "/evaluate",
+    1:         json={
+    1:             "sessionId": "S_api",
+    1:             "messages": [
+    1:                 "human: Oi, me chamo Ana e quero uma pós em Saúde Mental.",
+    1:                 "ai: Olá, Ana! Posso te enviar o material e te encaminhar para a especialista.",
+                   ],
+               },
+           )
+    1:     assert response.status_code == 200
+    1:     payload = response.json()
+    1:     assert payload["success"] is True
+    1:     assert payload["data"]["session_id"] == "S_api"
+       
+       
+    1: def test_evaluate_requires_both_roles():
+    2:     response = client.post(
+    1:         "/evaluate",
+    1:         json={"sessionId": "S_invalid", "messages": ["human: Oi", "human: Tudo bem?"]},
+           )
+    1:     assert response.status_code == 422
+    1:     assert response.json()["success"] is False

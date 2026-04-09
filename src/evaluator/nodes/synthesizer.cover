@@ -1,0 +1,64 @@
+    1: from __future__ import annotations
+       
+    1: import logging
+       
+    1: from evaluator.nodes.evaluators import WEIGHTS
+    1: from evaluator.schemas import CriterionScore, EvaluationReport, ExtractedFacts, utc_now_iso
+       
+    1: logger = logging.getLogger("evaluator.synthesizer")
+       
+       
+    1: def classify(score: float) -> str:
+   13:     if score < 40:
+    1:         return "critico"
+   12:     if score < 60:
+    1:         return "atencao"
+   11:     if score < 75:
+    1:         return "regular"
+   10:     if score < 90:
+    7:         return "bom"
+    3:     return "excelente"
+       
+       
+    1: def build_strengths(scores: dict[str, CriterionScore]) -> list[str]:
+   54:     best = sorted(scores.values(), key=lambda item: item.score, reverse=True)[:3]
+   45:     return [f"{item.criterion_id} com score {item.score:.1f}: {item.justification}" for item in best]
+       
+       
+    1: def build_improvements(scores: dict[str, CriterionScore]) -> list[str]:
+   54:     worst = sorted(scores.values(), key=lambda item: item.score)[:3]
+    9:     items: list[str] = []
+   36:     for score in worst:
+   27:         if score.deductions:
+   15:             items.append(f"{score.criterion_id}: corrigir {'; '.join(score.deductions)}")
+               else:
+   12:             items.append(f"{score.criterion_id}: aprofundar o critério '{score.criterion_name}'.")
+    9:     return items
+       
+       
+    1: def heuristic_synthesize(session_id: str, extracted_facts: ExtractedFacts, criterion_scores: list[CriterionScore]) -> EvaluationReport:
+   56:     scores = {score.criterion_id: score for score in criterion_scores}
+   56:     weighted = sum(scores[criterion_id].score * weight for criterion_id, weight in WEIGHTS.items())
+    8:     final_score = round(weighted, 1)
+   16:     return EvaluationReport(
+    8:         session_id=session_id,
+    8:         evaluated_at=utc_now_iso(),
+    8:         score_final=final_score,
+    8:         classification=classify(final_score),
+    8:         scores=scores,
+    8:         extracted_facts=extracted_facts,
+    8:         strengths=build_strengths(scores),
+    8:         improvement_areas=build_improvements(scores),
+           )
+       
+       
+    1: def run_synthesizer(state: dict) -> dict:
+    7:     session_id = state["session_id"]
+    7:     extracted_facts = state["extracted_facts"]
+    7:     criterion_scores = state["criterion_scores"]
+    7:     logger.info("[%s] Iniciando síntese final", session_id)
+    7:     logger.debug("[%s] Síntese via regra determinística", session_id)
+    7:     report = heuristic_synthesize(session_id, extracted_facts, criterion_scores)
+    7:     logger.info("[%s] Síntese concluída com score %.1f", session_id, report.score_final)
+    7:     logger.debug("[%s] Relatório sintetizado: %s", session_id, report.model_dump(mode="json"))
+    7:     return {"report": report}

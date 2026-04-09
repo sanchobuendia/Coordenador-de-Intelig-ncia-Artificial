@@ -1,0 +1,209 @@
+    1: from __future__ import annotations
+       
+    1: from datetime import datetime, timezone
+    1: from typing import Literal, Optional
+       
+    1: import json
+       
+    1: from pydantic import BaseModel, ConfigDict, Field, field_validator
+       
+       
+    2: class LeadProfile(BaseModel):
+    1:     lead_name_informed: str = ""
+    1:     lead_area_of_interest: str = ""
+    1:     lead_background: Optional[str] = None
+    1:     lead_objective: Optional[str] = None
+    1:     lead_already_works_in_area: Optional[bool] = None
+       
+       
+    2: class QualificationAnalysis(BaseModel):
+    1:     qualification_questions_asked: list[str] = Field(default_factory=list)
+    1:     repeated_qualification_questions: list[str] = Field(default_factory=list)
+    1:     info_assumed_without_confirmation: list[str] = Field(default_factory=list)
+       
+       
+    2: class AssertivenessAnalysis(BaseModel):
+    1:     lead_questions_asked: list[str] = Field(default_factory=list)
+    1:     unanswered_questions: list[str] = Field(default_factory=list)
+    1:     deflected_questions: list[str] = Field(default_factory=list)
+    1:     course_correctly_identified: Optional[bool] = None
+    1:     course_presented: list[str] = Field(default_factory=list)
+    1:     course_not_found: bool = False
+       
+       
+    2: class FlowAnalysis(BaseModel):
+    1:     duplicate_bot_messages: list[str] = Field(default_factory=list)
+    1:     context_lost_moments: list[str] = Field(default_factory=list)
+    1:     wrong_course_assumed: bool = False
+    1:     wrong_course_assumed_evidence: Optional[str] = None
+    1:     non_text_input_received: bool = False
+    1:     non_text_input_handled: Optional[bool] = None
+    1:     flow_progression: list[str] = Field(default_factory=list)
+       
+       
+    2: class ComplianceAnalysis(BaseModel):
+    1:     bot_greeted_lead_as: str = ""
+    1:     name_mismatch: bool = False
+    1:     price_asked_by_lead: bool = False
+    1:     price_revealed_directly: bool = False
+    1:     escalation_triggered: bool = False
+    1:     escalation_trigger_reason: Optional[str] = None
+    1:     invented_information: list[str] = Field(default_factory=list)
+    1:     honest_when_uninformed: Optional[bool] = None
+       
+       
+    2: class ResolutionAnalysis(BaseModel):
+    1:     resolution_status: Literal["escalated", "material_sent", "resolved_in_chat", "dropped", "pending"] = "pending"
+    1:     material_sent: bool = False
+    1:     cta_present: bool = False
+    1:     last_message_sender: Literal["bot", "lead"] = "lead"
+    1:     lead_last_message: str = ""
+    1:     bot_last_message: str = ""
+       
+       
+    2: class ConversationMetadata(BaseModel):
+    1:     session_id: str
+    1:     total_turns: int
+    1:     lead_turn_count: int
+    1:     bot_turn_count: int
+       
+       
+    2: class ExtractedFacts(BaseModel):
+    1:     metadata: ConversationMetadata
+    1:     lead_profile: LeadProfile
+    1:     qualification: QualificationAnalysis
+    1:     assertiveness: AssertivenessAnalysis
+    1:     flow: FlowAnalysis
+    1:     compliance: ComplianceAnalysis
+    1:     resolution: ResolutionAnalysis
+       
+       
+    2: class CriterionScore(BaseModel):
+    1:     criterion_id: Literal["C1", "C2", "C3", "C4", "C5"]
+    1:     criterion_name: str
+    1:     score: float = Field(ge=0.0, le=100.0)
+    1:     justification: str
+    1:     evidences: list[str] = Field(default_factory=list)
+    1:     deductions: list[str] = Field(default_factory=list)
+       
+    2:     @field_validator("evidences", "deductions", mode="before")
+    2:     @classmethod
+    2:     def coerce_list_fields(cls, value):
+   84:         if isinstance(value, list):
+  375:             return [str(item) for item in value]
+>>>>>>         if isinstance(value, str):
+>>>>>>             stripped = value.strip()
+>>>>>>             if not stripped:
+>>>>>>                 return []
+>>>>>>             try:
+>>>>>>                 parsed = json.loads(stripped)
+>>>>>>                 if isinstance(parsed, list):
+>>>>>>                     return [str(item) for item in parsed]
+>>>>>>             except json.JSONDecodeError:
+>>>>>>                 pass
+>>>>>>             if stripped.startswith("[") and stripped.endswith("]"):
+>>>>>>                 inner = stripped[1:-1].strip()
+>>>>>>                 if not inner:
+>>>>>>                     return []
+>>>>>>                 return [part.strip().strip('"').strip("'") for part in inner.split(",") if part.strip()]
+>>>>>>             return [stripped]
+>>>>>>         return value
+       
+       
+    1: Classification = Literal["critico", "atencao", "regular", "bom", "excelente"]
+       
+       
+    2: class EvaluationReport(BaseModel):
+    1:     session_id: str
+    1:     evaluated_at: str
+    1:     score_final: float = Field(ge=0.0, le=100.0)
+    1:     classification: Classification
+    1:     scores: dict[str, CriterionScore]
+    1:     extracted_facts: ExtractedFacts
+    1:     strengths: list[str] = Field(default_factory=list)
+    1:     improvement_areas: list[str] = Field(default_factory=list)
+       
+    2:     @field_validator("evaluated_at")
+    2:     @classmethod
+    2:     def validate_iso_date(cls, value: str) -> str:
+    8:         datetime.fromisoformat(value.replace("Z", "+00:00"))
+    8:         return value
+       
+       
+    2: class EvaluationRequest(BaseModel):
+    1:     """Body do POST /evaluate."""
+       
+    2:     model_config = ConfigDict(
+    1:         populate_by_name=True,
+    1:         json_schema_extra={
+    2:             "example": {
+    1:                 "sessionId": "S_cb815acb",
+    1:                 "messages": [
+                           "human: Eu sou Pessoa_002",
+                           'ai: Olá, Pessoa_002! Eu sou a Beatriz, consultora de carreira da +A Code Academy. Vi que você tem interesse em uma pós-graduação. Você já tem algum curso em mente ou gostaria de ajuda para escolher?',
+                           "human: Dentro de Ed inclusiva",
+                           'ai: Entendi seu interesse em abordar temas de educação inclusiva. Temos uma pós em "TEA, TDAH e Inclusão: Saúde, Família e Sociedade", que pode ser relevante para esse campo.\nPosso te perguntar qual sua área de formação ou atuação para entender como essa especialização pode ajudar nos seus objetivos?',
+                           'human: Reposta da mensagem:  Entendi seu interesse em abordar temas de educação inclusiva. Temos uma pós em "TEA, TDAH e Inclusão: Saúde, Família e Sociedade", que pode ser relevante para esse campo. Resposta:  Sim',
+                           "human: Sou diretora escolar",
+                           "ai: Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva? Assim consigo te direcionar melhor.",
+                           "human: Pedagogia \nPós em educação brasileira \nMBA em gestão escolar",
+                           "ai: Ótimo saber que você é diretora escolar! Muitos profissionais de gestão na educação buscam essa especialização para promover práticas mais inclusivas nas escolas.\nTem algum desafio específico ou objetivo que te motivou a buscar o curso de TEA, TDAH e Inclusão?",
+                           "human: Reposta da mensagem:  Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva? Assim consigo te direcionar melhor. Resposta:  Não . Sim para o interesse nesse curso",
+                           "ai: Sua formação é uma base sólida para liderar ações de inclusão escolar. A pós em TEA, TDAH e Inclusão: Saúde, Família e Sociedade aprofunda o olhar sobre políticas inclusivas, a integração de talentos neurodiversos, e prepara gestores para construir estratégias efetivas junto a equipes e famílias.\nVeja o vídeo de apresentação e acesse o material completo do curso nos links abaixo:\nSe quiser, posso te orientar para os próximos passos e os detalhes da matrícula. Posso prosseguir com seu cadastro ou prefere tirar alguma dúvida pontual sobre o programa?",
+                           "ai: Ótimo, já entendi que seu interesse é direcionado ao curso TEA, TDAH e Inclusão: Saúde, Família e Sociedade. Essa pós-graduação trabalha temas como neurodesenvolvimento, políticas públicas de inclusão, estratégias para integração de alunos neurodivergentes e o papel da família e da escola, sempre priorizando a construção de uma cultura inclusiva na gestão escolar.\nVocê pode conhecer detalhes da estrutura e forma de aplicação do curso neste vídeo de apresentação.\nE conferir a grade curricular e informações em PDF.\nSe quiser seguir para inscrição ou tirar dúvidas pontuais sobre valor, prazo ou formas de ingresso, me avise que já te passo as próximas orientações.",
+                           "human: Estou no trânsito agora . Chegando no trabalho vejo o vídeo e te chamo aqui",
+                           "ai: Perfeito, fique à vontade para assistir ao vídeo quando conseguir! Assim que estiver pronta, é só me chamar aqui para conversarmos sobre dúvidas ou sobre o processo de matrícula. Deixo aberto para avançarmos juntos quando for o melhor momento para você.",
+                       ],
+                   }
+               },
+           )
+       
+    2:     session_id: str = Field(
+    1:         min_length=1,
+    1:         alias="sessionId",
+    1:         description="Identificador único da sessão",
+           )
+    2:     messages: list[str] = Field(
+    1:         min_length=2,
+    1:         description="Lista de mensagens em ordem cronológica",
+           )
+       
+    2:     @field_validator("messages")
+    2:     @classmethod
+    2:     def must_have_both_roles(cls, value: list[str]) -> list[str]:
+    5:         roles: set[str] = set()
+   13:         for message in value:
+    9:             if ":" not in message:
+    1:                 raise ValueError("Cada mensagem deve seguir o formato 'human: ...' ou 'ai: ...'")
+    8:             role, content = message.split(":", 1)
+    8:             role = role.strip().lower()
+    8:             if role not in {"human", "ai"}:
+>>>>>>                 raise ValueError("Cada mensagem deve começar com 'human:' ou 'ai:'")
+    8:             if not content.strip():
+>>>>>>                 raise ValueError("Cada mensagem deve conter conteúdo após o papel")
+    8:             roles.add(role)
+    4:         if "human" not in roles or "ai" not in roles:
+    2:             raise ValueError("A conversa deve conter mensagens de 'human' e 'ai'")
+    2:         return value
+       
+    1:     def to_conversation_text(self) -> str:
+   12:         return "\n".join(message.strip() for message in self.messages)
+       
+       
+    2: class EvaluationResponse(BaseModel):
+    1:     """Envelope de resposta bem-sucedida."""
+       
+    1:     success: bool = True
+    1:     data: EvaluationReport
+       
+       
+    2: class ErrorDetail(BaseModel):
+    1:     """Envelope de resposta de erro."""
+       
+    1:     success: bool = False
+    1:     error: str
+    1:     detail: str | None = None
+       
+       
+    1: def utc_now_iso() -> str:
+    8:     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")

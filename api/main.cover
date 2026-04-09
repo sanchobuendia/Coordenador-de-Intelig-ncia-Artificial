@@ -1,0 +1,125 @@
+    1: from __future__ import annotations
+       
+    1: import logging
+    1: import sys
+    1: import time
+    1: from contextlib import asynccontextmanager
+    1: from pathlib import Path
+       
+    1: from fastapi import FastAPI, HTTPException, Request
+    1: from fastapi.exceptions import RequestValidationError
+    1: from fastapi.responses import JSONResponse
+       
+    1: ROOT_DIR = Path(__file__).resolve().parents[1]
+    1: SRC_DIR = ROOT_DIR / "src"
+    1: if str(SRC_DIR) not in sys.path:
+>>>>>>     sys.path.insert(0, str(SRC_DIR))
+       
+    1: from evaluator.config import get_settings
+    1: from evaluator.graph import apersistent_graph, graph as default_graph
+    1: from evaluator.schemas import ErrorDetail, EvaluationRequest, EvaluationResponse
+       
+    1: settings = get_settings()
+    2: logging.basicConfig(
+    1:     level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
+    1:     format="%(levelname)s:%(name)s:%(message)s",
+       )
+    1: logger = logging.getLogger("api")
+       
+       
+    1: def _display_value(value: str, max_length: int = 120) -> str:
+>>>>>>     if not value:
+>>>>>>         return "<not-set>"
+>>>>>>     if len(value) <= max_length:
+>>>>>>         return value
+>>>>>>     return f"{value[:max_length]}..."
+       
+       
+    2: @asynccontextmanager
+    2: async def lifespan(app: FastAPI):
+>>>>>>     async with apersistent_graph() as compiled_graph:
+>>>>>>         app.state.graph = compiled_graph
+>>>>>>         logger.info("Serviço iniciado — grafo LangGraph compilado")
+>>>>>>         logger.info(
+>>>>>>             "Configuração do modelo: AWS_REGION=%s MODEL_PROVIDER=%s BEDROCK_MODEL_ID=%s MODEL_TEMPERATURE=%s",
+>>>>>>             _display_value(settings.AWS_REGION),
+>>>>>>             _display_value(settings.MODEL_PROVIDER),
+>>>>>>             _display_value(settings.BEDROCK_MODEL_ID),
+>>>>>>             settings.MODEL_TEMPERATURE,
+               )
+>>>>>>         logger.debug("Configuração ativa: LOG_LEVEL=%s", settings.LOG_LEVEL)
+>>>>>>         yield
+>>>>>>         logger.info("Serviço encerrado")
+       
+       
+    2: app = FastAPI(
+    1:     title="Conversation Quality Evaluator",
+    1:     description="Avalia a qualidade de atendimento em conversas chatbot-lead",
+    1:     version="1.0.0",
+    1:     lifespan=lifespan,
+       )
+       
+       
+    3: @app.post(
+    1:     "/evaluate",
+    1:     response_model=EvaluationResponse,
+    1:     responses={
+    1:         422: {"model": ErrorDetail, "description": "Payload inválido"},
+    1:         500: {"model": ErrorDetail, "description": "Erro interno no pipeline"},
+           },
+    1:     summary="Avalia a qualidade de uma conversa",
+       )
+    2: async def evaluate(payload: EvaluationRequest, request: Request) -> EvaluationResponse:
+    1:     start = time.perf_counter()
+    1:     logger.info("[%s] Avaliação iniciada — %s mensagens", payload.session_id, len(payload.messages))
+    1:     logger.debug("[%s] Payload normalizado: %s", payload.session_id, payload.to_conversation_text())
+    1:     compiled_graph = getattr(request.app.state, "graph", default_graph)
+    1:     try:
+    2:         result = await compiled_graph.ainvoke(
+    1:             {
+    1:                 "session_id": payload.session_id,
+    1:                 "conversation": payload.to_conversation_text(),
+                   },
+    1:             config={"configurable": {"thread_id": payload.session_id}},
+               )
+>>>>>>     except Exception as exc:  # pragma: no cover
+>>>>>>         logger.exception("[%s] Falha no pipeline", payload.session_id)
+>>>>>>         raise HTTPException(status_code=500, detail=str(exc)) from exc
+       
+    1:     elapsed = time.perf_counter() - start
+    2:     logger.info(
+    1:         "[%s] Concluído em %.1fs — score=%s classification=%s",
+    1:         payload.session_id,
+    1:         elapsed,
+    1:         result["report"].score_final,
+    1:         result["report"].classification,
+           )
+    1:     logger.debug("[%s] Relatório final gerado com %s critérios", payload.session_id, len(result["report"].scores))
+    1:     return EvaluationResponse(data=result["report"])
+       
+       
+    2: @app.get("/health", summary="Health check")
+    2: async def health() -> dict[str, str]:
+    1:     return {"status": "ok"}
+       
+       
+    2: @app.exception_handler(RequestValidationError)
+    2: async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    1:     logger.info("Payload inválido recebido em %s", request.url.path)
+    1:     logger.debug("Detalhes da validação: %s", exc)
+    2:     return JSONResponse(
+    1:         status_code=422,
+    1:         content=ErrorDetail(error="Payload inválido", detail=str(exc)).model_dump(),
+           )
+       
+       
+    2: @app.exception_handler(HTTPException)
+    2: async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+>>>>>>     if exc.status_code != 500:
+>>>>>>         raise exc
+>>>>>>     logger.info("Erro interno ao processar %s", request.url.path)
+>>>>>>     logger.debug("Detalhe do erro interno: %s", exc.detail)
+>>>>>>     return JSONResponse(
+>>>>>>         status_code=500,
+>>>>>>         content=ErrorDetail(error="Erro interno no pipeline", detail=str(exc.detail)).model_dump(),
+           )

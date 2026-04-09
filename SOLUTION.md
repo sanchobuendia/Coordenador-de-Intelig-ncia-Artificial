@@ -199,6 +199,44 @@ Metricas importantes:
 - divergencia entre avaliacao humana e IA
 - percentual de casos escalados para revisao
 
+## Exemplo de execucao do prototipo
+
+Para demonstrar o comportamento do MVP, foi executado um caso de atendimento em que o lead:
+
+- informou o nome como `Pessoa_006`
+- declarou formacao em Redes de Computadores e graduacao em Defesa Cibernetica
+- explicitou interesse em `IA aplicada em Cybersecurity`
+ 
+Observacao: o exemplo mais recente do `README.md` foi atualizado para um caso real de educacao inclusiva, com resposta completa do sistema. Os pontos abaixo permanecem apenas como ilustracao resumida do comportamento do prototipo e nao como copia literal do exemplo operacional documentado.
+
+Resultado observado:
+
+- `score_final`: `99`
+- `classification`: `excelente`
+- distribuicao dos criterios: `C1=100`, `C2=100`, `C3=100`, `C4=100`, `C5=90`
+
+Leitura do resultado:
+
+- a conversa performou bem em qualificacao, assertividade, fluxo e conformidade
+- o criterio `C5` ficou ligeiramente abaixo dos demais porque o caso terminou em `material_sent`, com CTA e proximo passo claro, mas sem fechamento mais forte como escalada ou resolucao final
+- o caso ilustra bem a proposta do MVP: separar fatos extraidos da etapa de scoring para permitir justificativa e auditoria por criterio
+
+Evidencias relevantes capturadas nesse teste:
+
+- `lead_area_of_interest: IA aplicada em Cybersecurity`
+- `lead_background: Graduação em Redes de Computadores. Graduando em Defesa Cibernética.`
+- `course_correctly_identified: True`
+- `resolution_status: material_sent`
+- `material_sent: True`
+- `cta_present: True`
+
+Observacao importante:
+
+- neste teste houve um comportamento inconsistente no campo `extracted_facts.metadata.session_id`, que retornou `Pessoa_006` em vez do `sessionId` de entrada `S_cb815acbtt1`
+- esse ponto nao invalida o racional arquitetural, mas deve ser tratado como ajuste de robustez antes de uma versao de producao
+
+Entrada completa e saida completa desse teste estao documentadas no `README.md`, para facilitar reproducao e inspecao do comportamento do prototipo.
+
 ## Riscos e limitacoes
 
 - o extrator ainda concentra bastante responsabilidade sem uma camada de confianca explicita
@@ -206,6 +244,7 @@ Metricas importantes:
 - nao ha calibracao estatistica com ground truth humano no repositorio
 - o prototipo ainda nao processa voz, apenas texto
 - nao ha politica implementada de redacao de dados sensiveis
+- ha casos em que campos estruturados podem sair inconsistentes com o identificador de entrada e precisam de validacao adicional
 
 ## Proximos passos
 
