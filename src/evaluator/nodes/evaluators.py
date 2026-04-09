@@ -72,26 +72,26 @@ def _score_c1(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
         f"context_lost_moments: {flow.context_lost_moments}",
     ]
     if not qualification.qualification_questions_asked:
-        score -= 40
-        deductions.append("ausência de qualificação: -40pts")
+        score -= 45
+        deductions.append("ausência de qualificação: -45pts")
     for _ in qualification.repeated_qualification_questions:
-        score -= 10
-        deductions.append("pergunta repetida sem motivo: -10pts")
+        score -= 12
+        deductions.append("pergunta repetida sem motivo: -12pts")
     for _ in qualification.info_assumed_without_confirmation:
-        score -= 15
-        deductions.append("info assumida sem confirmação: -15pts")
+        score -= 20
+        deductions.append("info assumida sem confirmação: -20pts")
     if not facts.lead_profile.lead_area_of_interest:
-        score -= 10
-        deductions.append("área de interesse não identificada: -10pts")
+        score -= 12
+        deductions.append("área de interesse não identificada: -12pts")
     if not facts.lead_profile.lead_background:
-        score -= 5
-        deductions.append("background do lead não identificado: -5pts")
+        score -= 8
+        deductions.append("background do lead não identificado: -8pts")
     if not facts.lead_profile.lead_objective:
-        score -= 7
-        deductions.append("objetivo do lead não identificado: -7pts")
+        score -= 10
+        deductions.append("objetivo do lead não identificado: -10pts")
     if any("apresentou curso antes de concluir a qualificação" in item for item in flow.context_lost_moments):
-        score -= 15
-        deductions.append("curso apresentado antes da qualificação: -15pts")
+        score -= 20
+        deductions.append("curso apresentado antes da qualificação: -20pts")
     justification = (
         "O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. "
         f"O bot fez {len(qualification.qualification_questions_asked)} perguntas de qualificação, "
@@ -120,14 +120,14 @@ def _score_c2(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
         f"course_correctly_identified: {assertiveness.course_correctly_identified}",
     ]
     for _ in assertiveness.unanswered_questions:
-        score -= 20
-        deductions.append("pergunta sem resposta: -20pts")
+        score -= 25
+        deductions.append("pergunta sem resposta: -25pts")
     for _ in assertiveness.deflected_questions:
-        score -= 10
-        deductions.append("pergunta desviada: -10pts")
-    if assertiveness.course_correctly_identified is False:
         score -= 15
-        deductions.append("curso incorreto apresentado: -15pts")
+        deductions.append("pergunta desviada: -15pts")
+    if assertiveness.course_correctly_identified is False:
+        score -= 20
+        deductions.append("curso incorreto apresentado: -20pts")
     justification = (
         "O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. "
         f"Foram identificadas {len(assertiveness.unanswered_questions)} perguntas sem resposta e "
@@ -156,20 +156,20 @@ def _score_c3(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
         f"flow_progression: {flow.flow_progression}",
     ]
     for _ in flow.duplicate_bot_messages:
-        score -= 15
-        deductions.append("mensagem duplicada: -15pts")
+        score -= 20
+        deductions.append("mensagem duplicada: -20pts")
     for _ in flow.context_lost_moments:
-        score -= 20
-        deductions.append("perda de contexto: -20pts")
+        score -= 22
+        deductions.append("perda de contexto: -22pts")
     if flow.wrong_course_assumed:
-        score -= 20
-        deductions.append("curso assumido antes de confirmação: -20pts")
-    if flow.non_text_input_received and flow.non_text_input_handled is False:
-        score -= 10
-        deductions.append("input não textual não tratado: -10pts")
-    if not flow.flow_progression:
         score -= 25
-        deductions.append("conversa sem progressão clara: -25pts")
+        deductions.append("curso assumido antes de confirmação: -25pts")
+    if flow.non_text_input_received and flow.non_text_input_handled is False:
+        score -= 12
+        deductions.append("input não textual não tratado: -12pts")
+    if not flow.flow_progression:
+        score -= 30
+        deductions.append("conversa sem progressão clara: -30pts")
     justification = (
         "O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. "
         f"A conversa passou por {len(flow.flow_progression)} etapas e registrou "
@@ -198,17 +198,17 @@ def _score_c4(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
         f"honest_when_uninformed: {compliance.honest_when_uninformed}",
     ]
     if compliance.name_mismatch:
-        score -= 25
-        deductions.append("nome errado do lead: -25pts")
-    if compliance.price_revealed_directly:
-        score -= 40
-        deductions.append("preço revelado diretamente: -40pts")
-    for _ in compliance.invented_information:
-        score -= 20
-        deductions.append("informação inventada/sem base: -20pts")
-    if compliance.price_asked_by_lead and not compliance.price_revealed_directly and not compliance.escalation_triggered:
         score -= 30
-        deductions.append("não escalou quando devia: -30pts")
+        deductions.append("nome errado do lead: -30pts")
+    if compliance.price_revealed_directly:
+        score -= 45
+        deductions.append("preço revelado diretamente: -45pts")
+    for _ in compliance.invented_information:
+        score -= 25
+        deductions.append("informação inventada/sem base: -25pts")
+    if compliance.price_asked_by_lead and not compliance.price_revealed_directly and not compliance.escalation_triggered:
+        score -= 35
+        deductions.append("não escalou quando devia: -35pts")
     justification = (
         "O critério verifica aderência às políticas comerciais e de personalização. "
         f"Foram observadas {len(compliance.invented_information)} informações possivelmente inventadas "
@@ -235,27 +235,27 @@ def _score_c5(facts: ExtractedFacts, criterion: dict) -> CriterionScore:
     ]
     deductions: list[str] = []
     resolution_scores = {
-        "escalated": 95.0,
-        "material_sent": 90.0 if resolution.cta_present else 78.0,
-        "resolved_in_chat": 85.0,
-        "pending": 55.0,
-        "dropped": 25.0,
+        "escalated": 90.0,
+        "material_sent": 78.0 if resolution.cta_present else 68.0,
+        "resolved_in_chat": 82.0,
+        "pending": 42.0,
+        "dropped": 20.0,
     }
     score = resolution_scores[resolution.resolution_status]
     if resolution.resolution_status == "pending":
         if resolution.material_sent and resolution.cta_present:
-            score = 72.0
+            score = 62.0
         elif resolution.material_sent or resolution.cta_present:
-            score = 60.0
+            score = 52.0
     if resolution.resolution_status == "pending":
         if resolution.material_sent and resolution.cta_present:
-            deductions.append("status pending com material enviado e CTA presente: faixa 70-79")
+            deductions.append("status pending com material enviado e CTA presente: faixa 60-69")
         elif resolution.material_sent or resolution.cta_present:
             deductions.append("status pending com encaminhamento parcial: faixa 50-69")
         else:
-            deductions.append("conversa sem resolução clara: -45pts")
+            deductions.append("conversa sem resolução clara: -58pts")
     if resolution.resolution_status == "dropped":
-        deductions.append("sessão encerrada abruptamente: -75pts")
+        deductions.append("sessão encerrada abruptamente: -80pts")
     justification = (
         "O desfecho foi avaliado pelo encaminhamento final, envio de material e presença de CTA. "
         f"O status final identificado foi '{resolution.resolution_status}'. "

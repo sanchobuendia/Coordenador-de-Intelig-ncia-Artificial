@@ -6,7 +6,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -17,6 +17,7 @@ if str(SRC_DIR) not in sys.path:
 
 from evaluator.config import get_settings
 from evaluator.graph import apersistent_graph, graph as default_graph
+from evaluator.nodes.guardrails import sanitize_conversation
 from evaluator.schemas import ErrorDetail, EvaluationRequest, EvaluationResponse
 
 settings = get_settings()
@@ -63,16 +64,22 @@ app = FastAPI(
 @app.post(
     "/evaluate",
     response_model=EvaluationResponse,
+    response_model_exclude_none=True,
     responses={
         422: {"model": ErrorDetail, "description": "Payload inválido"},
         500: {"model": ErrorDetail, "description": "Erro interno no pipeline"},
     },
     summary="Avalia a qualidade de uma conversa",
 )
-async def evaluate(payload: EvaluationRequest, request: Request) -> EvaluationResponse:
+async def evaluate(
+    payload: EvaluationRequest,
+    request: Request,
+    verbose: bool = Query(default=False, description="Quando true, retorna evidências, deduções e fatos extraídos completos."),
+) -> EvaluationResponse:
     start = time.perf_counter()
+    safe_payload, _ = sanitize_conversation(payload.to_conversation_text())
     logger.info("[%s] Avaliação iniciada — %s mensagens", payload.session_id, len(payload.messages))
-    logger.debug("[%s] Payload normalizado: %s", payload.session_id, payload.to_conversation_text())
+    logger.debug("[%s] Payload normalizado e sanitizado: %s", payload.session_id, safe_payload)
     compiled_graph = getattr(request.app.state, "graph", default_graph)
     try:
         result = await compiled_graph.ainvoke(
@@ -95,7 +102,8 @@ async def evaluate(payload: EvaluationRequest, request: Request) -> EvaluationRe
         result["report"].classification,
     )
     logger.debug("[%s] Relatório final gerado com %s critérios", payload.session_id, len(result["report"].scores))
-    return EvaluationResponse(data=result["report"])
+    report = result["report"] if verbose else result["report"].to_executive_view()
+    return EvaluationResponse(data=report)
 
 
 @app.get("/health", summary="Health check")
