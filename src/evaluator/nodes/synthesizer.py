@@ -12,15 +12,30 @@ logger = logging.getLogger("evaluator.synthesizer")
 
 
 def classify(score: float) -> str:
-    if score < 40:
+    if score < 50:
         return "critico"
-    if score < 60:
+    if score < 70:
         return "atencao"
-    if score < 75:
+    if score < 85:
         return "regular"
-    if score < 90:
+    if score < 95:
         return "bom"
     return "excelente"
+
+
+def apply_score_caps(score: float, extracted_facts: ExtractedFacts) -> float:
+    caps: list[float] = []
+    if extracted_facts.compliance.name_mismatch:
+        caps.append(75.0)
+    if extracted_facts.flow.wrong_course_assumed:
+        caps.append(70.0)
+    if extracted_facts.assertiveness.unanswered_questions:
+        caps.append(78.0)
+    if extracted_facts.flow.duplicate_bot_messages and extracted_facts.resolution.resolution_status == "pending":
+        caps.append(82.0)
+    if extracted_facts.qualification.info_assumed_without_confirmation and extracted_facts.resolution.resolution_status == "pending":
+        caps.append(84.0)
+    return min([score, *caps]) if caps else score
 
 
 def build_strengths(scores: dict[str, CriterionScore]) -> list[str]:
@@ -32,8 +47,9 @@ def build_improvements(scores: dict[str, CriterionScore]) -> list[str]:
     worst = sorted(scores.values(), key=lambda item: item.score)[:3]
     items: list[str] = []
     for score in worst:
-        if score.deductions:
-            items.append(f"{score.criterion_id}: corrigir {'; '.join(score.deductions)}")
+        deductions = score.deductions or []
+        if deductions:
+            items.append(f"{score.criterion_id}: corrigir {'; '.join(deductions)}")
         else:
             items.append(f"{score.criterion_id}: aprofundar o critério '{score.criterion_name}'.")
     return items
@@ -42,11 +58,11 @@ def build_improvements(scores: dict[str, CriterionScore]) -> list[str]:
 def build_executive_summary(scores: dict[str, CriterionScore], classification: str, resolution_status: str) -> str:
     best = max(scores.values(), key=lambda item: item.score)
     worst = min(scores.values(), key=lambda item: item.score)
-    strengths = "sem deduções relevantes" if not best.deductions else f"com destaque para {best.criterion_id}"
+    strengths = "sem deduções relevantes" if not (best.deductions or []) else f"com destaque para {best.criterion_id}"
     attention = (
         "Sem pontos críticos identificados."
-        if not worst.deductions
-        else f"Principal atenção em {worst.criterion_id}: {'; '.join(worst.deductions)}."
+        if not (worst.deductions or [])
+        else f"Principal atenção em {worst.criterion_id}: {'; '.join(worst.deductions or [])}."
     )
     return (
         f"Atendimento classificado como {classification}, com score final {sum(scores[item].score * weight for item, weight in WEIGHTS.items()):.1f}. "
@@ -88,7 +104,7 @@ def llm_executive_summary(report: EvaluationReport) -> str:
 def heuristic_synthesize(session_id: str, extracted_facts: ExtractedFacts, criterion_scores: list[CriterionScore]) -> EvaluationReport:
     scores = {score.criterion_id: score for score in criterion_scores}
     weighted = sum(scores[criterion_id].score * weight for criterion_id, weight in WEIGHTS.items())
-    final_score = round(weighted, 1)
+    final_score = round(apply_score_caps(weighted, extracted_facts), 1)
     report = EvaluationReport(
         session_id=session_id,
         evaluated_at=utc_now_iso(),

@@ -1,5 +1,5 @@
 from evaluator.nodes import synthesizer as synthesizer_module
-from evaluator.nodes.synthesizer import build_executive_summary, build_improvements, build_strengths, classify, heuristic_synthesize
+from evaluator.nodes.synthesizer import apply_score_caps, build_executive_summary, build_improvements, build_strengths, classify, heuristic_synthesize
 from evaluator.schemas import (
     AssertivenessAnalysis,
     ComplianceAnalysis,
@@ -43,19 +43,19 @@ def build_score(criterion_id: str, score: float, deductions=None) -> CriterionSc
 
 
 def test_classify_thresholds():
-    assert classify(39.9) == "critico"
-    assert classify(59.9) == "atencao"
-    assert classify(74.9) == "regular"
-    assert classify(89.9) == "bom"
-    assert classify(90.0) == "excelente"
+    assert classify(49.9) == "critico"
+    assert classify(69.9) == "atencao"
+    assert classify(84.9) == "regular"
+    assert classify(94.9) == "bom"
+    assert classify(95.0) == "excelente"
 
 
 def test_build_strengths_and_improvements():
     scores = {
         "C1": build_score("C1", 95),
         "C2": build_score("C2", 85),
-        "C3": build_score("C3", 40, ["perda de contexto: -20pts"]),
-        "C4": build_score("C4", 60, ["nome errado do lead: -25pts"]),
+        "C3": build_score("C3", 40, ["perda de contexto: -22pts"]),
+        "C4": build_score("C4", 60, ["nome errado do lead: -30pts"]),
         "C5": build_score("C5", 70),
     }
     strengths = build_strengths(scores)
@@ -84,7 +84,7 @@ def test_heuristic_synthesize_builds_weighted_report():
         synthesizer_module.llm_executive_summary = original
     assert report.session_id == "S_syn"
     assert report.score_final == 91.0
-    assert report.classification == "excelente"
+    assert report.classification == "bom"
     assert report.executive_summary == "Resumo executivo do atendimento."
     assert len(report.strengths) == 3
     assert len(report.improvement_areas) == 3
@@ -106,3 +106,11 @@ def test_heuristic_synthesize_falls_back_when_llm_summary_fails():
         synthesizer_module.llm_executive_summary = original
     assert report.executive_summary
     assert "status final do atendimento" in report.executive_summary.lower()
+
+
+def test_apply_score_caps_reduces_duplicate_pending_conversation():
+    facts = build_facts()
+    facts.flow.duplicate_bot_messages = ["mensagem duplicada"]
+    facts.resolution.resolution_status = "pending"
+    capped = apply_score_caps(93.0, facts)
+    assert capped == 82.0

@@ -2,7 +2,7 @@
 
 ## Visao geral
 
-O objetivo da solucao e apoiar a avaliacao humana da qualidade de atendimentos em canais digitais, produzindo um relatorio estruturado com scores, justificativas e evidencias. O foco do MVP e combinar interpretacao flexivel de linguagem natural com regras claras de negocio e auditoria.
+O objetivo da solucao e apoiar a avaliacao humana da qualidade de atendimentos em canais digitais, produzindo um relatorio estruturado com scores, justificativas e evidencias. O foco do MVP e combinar interpretacao flexivel de linguagem natural com regras claras de negocio e auditoria, sem obrigar o avaliador humano a ler um JSON completo em todos os casos.
 
 A arquitetura adotada no prototipo separa o problema em duas camadas:
 
@@ -17,10 +17,12 @@ Essa separacao evita que cada criterio dependa diretamente da conversa bruta, re
 Conversa recebida
   -> validacao do payload
   -> normalizacao em texto unico
+  -> guardrails de seguranca
   -> extrator LLM gera ExtractedFacts
   -> roteamento para 5 criterios paralelos
   -> scoring deterministico por rubrica
   -> sintese final do EvaluationReport
+  -> resumo executivo via LLM
   -> resposta da API
 ```
 
@@ -28,10 +30,11 @@ Campos relevantes do relatorio:
 
 - score final ponderado
 - classificacao final
+- executive_summary
 - score por criterio
 - justificativa por criterio
-- evidencias por criterio
-- fatos extraidos da conversa
+- evidencias por criterio no modo detalhado
+- fatos extraidos da conversa no modo detalhado
 - pontos fortes
 - areas de melhoria
 
@@ -49,7 +52,7 @@ Os criterios foram escolhidos para equilibrar experiencia do cliente, aderencia 
 
 ## Estrategia de prompts
 
-O prototipo usa prompt apenas no extrator. A decisao foi deliberada.
+O prototipo usa prompt no extrator e no sintetizador executivo. A decisao foi deliberada.
 
 Principios:
 
@@ -57,6 +60,7 @@ Principios:
 - ser conservador em caso de ambiguidade
 - preservar evidencias textuais no output estruturado
 - produzir schema fixo para alimentar scoring deterministico
+- gerar um resumo executivo curto e ancorado apenas no relatorio estruturado
 
 Trade-off:
 
@@ -74,7 +78,8 @@ Evolucao natural:
 ### MVP adotado
 
 - um unico modelo para extracao estruturada
-- scoring e sintese deterministica
+- scoring deterministico
+- um segundo uso de LLM apenas para o resumo executivo
 
 Racional:
 
@@ -82,6 +87,7 @@ Racional:
 - menor latencia que uma arquitetura totalmente LLM
 - maior consistencia entre execucoes
 - mais facilidade de justificar a nota para auditoria humana
+- melhor usabilidade para o avaliador com uma resposta curta por padrao
 
 ### Criterios para escolha do modelo do extrator
 
@@ -96,12 +102,14 @@ No prototipo, o extrator esta preparado para uso via LangChain com provider conf
 
 O fluxo foi modelado em LangGraph com fan-out/fan-in:
 
+- um no inicial de guardrails
 - um no de extracao
 - cinco nos de avaliacao em paralelo
-- um no final de sintese
+- um no final de sintese com resumo executivo
 
 Essa estrutura permite:
 
+- bloquear ou neutralizar conteudo potencialmente malicioso antes da LLM
 - paralelizar criterios
 - inserir checkpoints
 - isolar falhas por etapa
@@ -115,6 +123,7 @@ Descricao:
 
 - a conversa vira fatos estruturados
 - os criterios calculam score a partir desses fatos
+- o sintetizador transforma o relatorio em um resumo executivo para leitura humana
 
 Vantagens:
 
@@ -122,6 +131,7 @@ Vantagens:
 - alta auditabilidade
 - rubricas mais faceis de revisar com operacao
 - menor variacao de output entre execucoes
+- resposta curta por padrao e resposta completa sob demanda
 
 Limitacoes:
 
@@ -158,10 +168,11 @@ Para o MVP, eu adotaria a Abordagem A, que e a implementada neste repositorio. E
 
 A solucao foi desenhada para permitir trilha de decisao:
 
-- fatos extraidos ficam no relatorio final
-- cada criterio retorna deducoes e evidencias
+- fatos extraidos ficam disponiveis no modo detalhado
+- cada criterio retorna deducoes e evidencias no modo detalhado
 - pesos sao explicitos
 - checkpoints do LangGraph podem ser persistidos em Postgres
+- a resposta padrao devolve apenas a visao executiva para reduzir payload
 
 Para producao, eu adicionaria:
 
@@ -173,13 +184,34 @@ Para producao, eu adicionaria:
 
 ## Dados sensiveis
 
-Parte das conversas pode conter dados pessoais. Por isso, a estrategia recomendada de producao inclui:
+Parte das conversas pode conter dados pessoais. O prototipo agora ja aplica uma camada basica de protecao antes da extracao:
 
-- mascaramento de PII antes de observabilidade externa
+- pseudonimizacao de nomes do lead e do bot
+- mascaramento de CPF, telefone e email
+- sanitizacao do texto antes de log e antes do extrator
+- registro estruturado da protecao aplicada em `extracted_facts.security`
+
+Com isso, o MVP ja atende de forma objetiva a premissa do desafio de que parte das conversas pode conter dados sensiveis.
+
+Para producao, eu adicionaria:
+
 - controle de retencao
 - segregacao de logs tecnicos e payloads
 - principio de minimo privilegio para acesso aos dados
 - anonimizacao para datasets de calibracao
+
+## Protecao contra prompt injection
+
+Como parte dos guardrails, o pipeline faz deteccao de padroes comuns de prompt injection no texto da conversa, como tentativas de:
+
+- mandar o modelo ignorar instrucoes anteriores
+- pedir revelacao de prompt ou mensagem de sistema
+- induzir troca de papel do modelo
+- sugerir uso indevido de ferramentas
+
+No MVP, esses sinais sao neutralizados antes do extrator e ficam registrados em `extracted_facts.security.prompt_injection_signals` no modo detalhado.
+
+Esse controle foi incluido porque o prototipo usa LLM na extracao e no resumo executivo, e portanto precisava de uma defesa explicita contra instrucoes maliciosas embutidas na conversa.
 
 ## Visao de operacao
 
@@ -198,44 +230,50 @@ Metricas importantes:
 - distribuicao de scores por criterio
 - divergencia entre avaliacao humana e IA
 - percentual de casos escalados para revisao
+- distribuicao por faixa de score apos calibracao
+
+## Contrato de resposta
+
+A API possui dois modos de resposta:
+
+- modo padrao: resposta executiva para uso cotidiano, com `score_final`, `classification`, `executive_summary`, scores resumidos e prioridades de melhoria
+- modo detalhado com `verbose=true`: resposta completa com `extracted_facts`, `security`, `evidences` e `deductions` para auditoria
+
+Esse desenho reduz payload, melhora leitura humana e preserva rastreabilidade quando necessario.
+
+## Calibracao da regua
+
+O scoring foi recalibrado para evitar inflacao de notas.
+
+Mudancas principais:
+
+- penalidades mais severas em `C1`, `C3` e `C5`
+- maior exigencia para classificar uma conversa como `excelente`
+- aplicacao de tetos no score final em casos de falhas relevantes, como:
+  - `name_mismatch`
+  - `wrong_course_assumed`
+  - perguntas sem resposta
+  - conversa `pending` com duplicacao de mensagens
+
+Faixas atuais:
+
+- `critico`: abaixo de 50
+- `atencao`: 50 a 69.9
+- `regular`: 70 a 84.9
+- `bom`: 85 a 94.9
+- `excelente`: 95 ou mais
 
 ## Exemplo de execucao do prototipo
 
-Para demonstrar o comportamento do MVP, foi executado um caso de atendimento em que o lead:
+O exemplo operacional mais atualizado do prototipo esta documentado no `README.md` com entrada e saida completas.
 
-- informou o nome como `Pessoa_006`
-- declarou formacao em Redes de Computadores e graduacao em Defesa Cibernetica
-- explicitou interesse em `IA aplicada em Cybersecurity`
- 
-Observacao: o exemplo mais recente do `README.md` foi atualizado para um caso real de educacao inclusiva, com resposta completa do sistema. Os pontos abaixo permanecem apenas como ilustracao resumida do comportamento do prototipo e nao como copia literal do exemplo operacional documentado.
+Esse exemplo demonstra:
 
-Resultado observado:
-
-- `score_final`: `99`
-- `classification`: `excelente`
-- distribuicao dos criterios: `C1=100`, `C2=100`, `C3=100`, `C4=100`, `C5=90`
-
-Leitura do resultado:
-
-- a conversa performou bem em qualificacao, assertividade, fluxo e conformidade
-- o criterio `C5` ficou ligeiramente abaixo dos demais porque o caso terminou em `material_sent`, com CTA e proximo passo claro, mas sem fechamento mais forte como escalada ou resolucao final
-- o caso ilustra bem a proposta do MVP: separar fatos extraidos da etapa de scoring para permitir justificativa e auditoria por criterio
-
-Evidencias relevantes capturadas nesse teste:
-
-- `lead_area_of_interest: IA aplicada em Cybersecurity`
-- `lead_background: Graduação em Redes de Computadores. Graduando em Defesa Cibernética.`
-- `course_correctly_identified: True`
-- `resolution_status: material_sent`
-- `material_sent: True`
-- `cta_present: True`
-
-Observacao importante:
-
-- neste teste houve um comportamento inconsistente no campo `extracted_facts.metadata.session_id`, que retornou `Pessoa_006` em vez do `sessionId` de entrada `S_cb815acbtt1`
-- esse ponto nao invalida o racional arquitetural, mas deve ser tratado como ajuste de robustez antes de uma versao de producao
-
-Entrada completa e saida completa desse teste estao documentadas no `README.md`, para facilitar reproducao e inspecao do comportamento do prototipo.
+- resposta executiva com `executive_summary`
+- contraste entre um caso excelente e um caso critico para evidenciar a calibracao da regua
+- score final menor do que a versao antiga do sistema, refletindo regua mais exigente
+- capacidade de abrir a trilha completa via modo detalhado
+- separacao entre payload de leitura humana e payload de auditoria
 
 ## Riscos e limitacoes
 
@@ -243,8 +281,8 @@ Entrada completa e saida completa desse teste estao documentadas no `README.md`,
 - regras heuristicas podem degradar quando o dominio sair do escopo atual
 - nao ha calibracao estatistica com ground truth humano no repositorio
 - o prototipo ainda nao processa voz, apenas texto
-- nao ha politica implementada de redacao de dados sensiveis
-- ha casos em que campos estruturados podem sair inconsistentes com o identificador de entrada e precisam de validacao adicional
+- a redacao atual cobre PII textual comum, mas ainda nao trata anexos, voz ou entidades mais complexas
+- a calibracao atual melhora discriminacao, mas ainda precisa ser validada contra avaliadores humanos
 
 ## Proximos passos
 

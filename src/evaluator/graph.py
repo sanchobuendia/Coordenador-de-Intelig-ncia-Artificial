@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager, contextmanager
 
-from langgraph.constants import Send
+from langgraph.types import Send
 from langgraph.graph import END, StateGraph
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from evaluator.config import get_settings
 from evaluator.nodes.evaluators import CRITERIA, run_evaluator
 from evaluator.nodes.extractor import run_extractor
+from evaluator.nodes.guardrails import run_guardrails
 from evaluator.nodes.synthesizer import run_synthesizer
 from evaluator.state import GraphState
 
@@ -16,6 +17,7 @@ ALLOWED_MSGPACK_MODULES = [
     ("evaluator.schemas", "EvaluationReport"),
     ("evaluator.schemas", "ExtractedFacts"),
     ("evaluator.schemas", "CriterionScore"),
+    ("evaluator.schemas", "SafetyAnalysis"),
 ]
 
 
@@ -28,10 +30,12 @@ def route_to_evaluators(state: GraphState) -> list[Send]:
 
 def build_graph() -> StateGraph:
     builder = StateGraph(GraphState)
+    builder.add_node("guardrails", run_guardrails)
     builder.add_node("extractor", run_extractor)
     builder.add_node("evaluator", run_evaluator)
     builder.add_node("synthesizer", run_synthesizer)
-    builder.set_entry_point("extractor")
+    builder.set_entry_point("guardrails")
+    builder.add_edge("guardrails", "extractor")
     builder.add_conditional_edges("extractor", route_to_evaluators, ["evaluator"])
     builder.add_edge("evaluator", "synthesizer")
     builder.add_edge("synthesizer", END)

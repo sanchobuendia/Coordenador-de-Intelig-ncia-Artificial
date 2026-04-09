@@ -26,6 +26,7 @@ def test_build_checkpoint_serde_allows_expected_modules():
         ("evaluator.schemas", "EvaluationReport"),
         ("evaluator.schemas", "ExtractedFacts"),
         ("evaluator.schemas", "CriterionScore"),
+        ("evaluator.schemas", "SafetyAnalysis"),
     ]
 
 

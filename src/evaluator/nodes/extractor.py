@@ -19,6 +19,7 @@ from evaluator.schemas import (
     LeadProfile,
     QualificationAnalysis,
     ResolutionAnalysis,
+    SafetyAnalysis,
 )
 
 load_dotenv()
@@ -109,9 +110,9 @@ def unique_preserve(items: Iterable[str]) -> list[str]:
 
 def detect_name(text: str) -> str | None:
     patterns = [
-        r"\beu sou ([\w_À-ÿ-]+)",
-        r"\bme chamo ([\w_À-ÿ-]+)",
-        r"\bmeu nome é ([\w_À-ÿ-]+)",
+        r"\beu sou ([\[\]\w_À-ÿ-]+)",
+        r"\bme chamo ([\[\]\w_À-ÿ-]+)",
+        r"\bmeu nome é ([\[\]\w_À-ÿ-]+)",
     ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -121,7 +122,7 @@ def detect_name(text: str) -> str | None:
 
 
 def detect_greeting_name(text: str) -> str:
-    match = re.search(r"\bol[aá],?\s+([\w_À-ÿ-]+)", text, re.IGNORECASE)
+    match = re.search(r"\bol[aá],?\s+([\[\]\w_À-ÿ-]+)", text, re.IGNORECASE)
     return match.group(1).strip(" .,!?") if match else ""
 
 
@@ -252,6 +253,7 @@ def compute_flow_progression(turns: list[Turn], escalation_triggered: bool = Fal
 def heuristic_extract(state: dict) -> ExtractedFacts:
     session_id = state["session_id"]
     conversation = state["conversation"]
+    security = state.get("security", SafetyAnalysis())
     turns = parse_conversation(conversation)
     human_turns = [turn for turn in turns if turn.role == "human"]
     ai_turns = [turn for turn in turns if turn.role == "ai"]
@@ -446,6 +448,7 @@ def heuristic_extract(state: dict) -> ExtractedFacts:
             lead_last_message=lead_last_message,
             bot_last_message=bot_last_message,
         ),
+        security=security,
     )
     return extracted
 
@@ -465,6 +468,8 @@ def run_extractor(state: dict) -> dict:
     except Exception as exc:  # pragma: no cover - exercised in tests via monkeypatch
         logger.warning("[%s] Falha na extração via LLM; usando fallback heurístico: %s", state["session_id"], exc)
         extracted = heuristic_extract(state)
+    if "security" in state:
+        extracted.security = SafetyAnalysis.model_validate(state["security"])
     logger.info("[%s] Extração concluída", state["session_id"])
     logger.debug("[%s] Fatos extraídos: %s", state["session_id"], extracted.model_dump(mode="json"))
     return {"extracted_facts": extracted}

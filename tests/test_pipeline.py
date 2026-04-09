@@ -21,7 +21,7 @@ def invoke_example(session_id: str):
 
 def test_pipeline_name_mismatch_hits_c4():
     report = invoke_example("S_84b564f9")
-    assert "nome errado do lead: -25pts" in report.scores["C4"].deductions
+    assert "nome errado do lead: -30pts" in report.scores["C4"].deductions
 
 
 def test_pipeline_wrong_course_assumed_hits_c3():
@@ -68,4 +68,5 @@ def test_pipeline_real_case_does_not_mark_false_escalation():
     assert report.extracted_facts.compliance.escalation_triggered is False
     assert report.extracted_facts.resolution.material_sent is True
     assert report.extracted_facts.resolution.cta_present is True
-    assert report.scores["C5"].score == 72.0
+    assert report.scores["C5"].score == 62.0
+    assert report.score_final <= 82.0

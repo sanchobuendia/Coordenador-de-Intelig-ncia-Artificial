@@ -1,6 +1,6 @@
 # Conversation Quality Evaluator
 
-Protótipo para avaliação auditável da qualidade de atendimentos em canais digitais. O MVP adota uma arquitetura híbrida: extração estruturada com LLM e scoring determinístico por rubrica, orquestrados em um grafo LangGraph.
+Protótipo para avaliação auditável da qualidade de atendimentos em canais digitais. O MVP adota uma arquitetura híbrida: extração estruturada com LLM, scoring determinístico por rubrica e síntese executiva com LLM, orquestrados em um grafo LangGraph.
 
 ## Entrega do desafio
 
@@ -12,13 +12,27 @@ Protótipo para avaliação auditável da qualidade de atendimentos em canais di
 
 ```text
 INPUT (conversa)
+  -> GUARDRAILS (mascaramento de PII + neutralizacao de prompt injection)
   -> EXTRATOR LLM
   -> 5 AVALIADORES DETERMINISTICOS (C1..C5)
-  -> SINTETIZADOR DETERMINISTICO
+  -> SINTETIZADOR (RESUMO EXECUTIVO VIA LLM)
   -> EvaluationReport
 ```
 
-Os avaliadores trabalham sobre fatos estruturados, não sobre a conversa bruta. Isso reduz variabilidade, facilita auditoria e desacopla a evolução dos critérios da etapa de interpretação textual.
+Os avaliadores trabalham sobre fatos estruturados, não sobre a conversa bruta. Isso reduz variabilidade, facilita auditoria e desacopla a evolução dos critérios da etapa de interpretação textual. O score permanece determinístico; a LLM no sintetizador é usada apenas para gerar um `executive_summary` legível para o avaliador humano.
+
+Guardrails implementados no MVP:
+
+- mascaramento de dados sensiveis antes do extrator e dos logs tecnicos
+- pseudonimizacao de nomes preservando consistencia para detectar `name_mismatch`
+- redacao de CPF, telefone e email
+- deteccao e neutralizacao de sinais comuns de prompt injection
+- trilha de seguranca em `extracted_facts.security` no modo detalhado
+
+Esses controles cobrem explicitamente dois riscos mencionados no desafio:
+
+- conversas com dados sensiveis, reduzindo exposicao de nome, CPF, telefone e email
+- tentativas de prompt injection no texto da conversa, neutralizadas antes da chamada ao modelo
 
 Critérios e pesos:
 
@@ -65,6 +79,11 @@ Endpoints:
 - `GET /health`
 - `POST /evaluate`
 
+Modo de resposta:
+
+- padrão: resposta executiva, mais enxuta, sem `extracted_facts`, `evidences` e `deductions`
+- `POST /evaluate?verbose=true`: resposta completa para auditoria, incluindo `extracted_facts.security`
+
 Exemplo de payload:
 
 ```json
@@ -92,208 +111,157 @@ result = graph.invoke(
 print(result["report"].model_dump_json(indent=2))
 ```
 
-## Exemplo completo
+## Exemplos
 
-Exemplo real de requisicao enviada ao endpoint `POST /evaluate`:
+O endpoint `POST /evaluate` retorna por padrao uma visao executiva. Para auditoria completa, use `POST /evaluate?verbose=true`.
+
+### Exemplo com score alto
+
+Entrada completa:
 
 ```json
 {
   "messages": [
-    "human: Eu sou Pessoa_002",
-    "ai: Olá, Pessoa_002! Eu sou a Beatriz, consultora de carreira da +A Code Academy. Vi que você tem interesse em uma pós-graduação. Você já tem algum curso em mente ou gostaria de ajuda para escolher?",
-    "human: Dentro de Ed inclusiva",
-    "ai: Entendi seu interesse em abordar temas de educação inclusiva. Temos uma pós em \"TEA, TDAH e Inclusão: Saúde, Família e Sociedade\", que pode ser relevante para esse campo.\nPosso te perguntar qual sua área de formação ou atuação para entender como essa especialização pode ajudar nos seus objetivos?",
-    "human: Reposta da mensagem:  Entendi seu interesse em abordar temas de educação inclusiva. Temos uma pós em \"TEA, TDAH e Inclusão: Saúde, Família e Sociedade\", que pode ser relevante para esse campo. Resposta:  Sim",
-    "human: Sou diretora escolar",
-    "ai: Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva? Assim consigo te direcionar melhor.",
-    "human: Pedagogia \nPós em educação brasileira \nMBA em gestão escolar",
-    "ai: Ótimo saber que você é diretora escolar! Muitos profissionais de gestão na educação buscam essa especialização para promover práticas mais inclusivas nas escolas.\nTem algum desafio específico ou objetivo que te motivou a buscar o curso de TEA, TDAH e Inclusão?",
-    "human: Reposta da mensagem:  Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva? Assim consigo te direcionar melhor. Resposta:  Não . Sim para o interesse nesse curso",
-    "ai: Sua formação é uma base sólida para liderar ações de inclusão escolar. A pós em TEA, TDAH e Inclusão: Saúde, Família e Sociedade aprofunda o olhar sobre políticas inclusivas, a integração de talentos neurodiversos, e prepara gestores para construir estratégias efetivas junto a equipes e famílias.\nVeja o vídeo de apresentação e acesse o material completo do curso nos links abaixo:\nSe quiser, posso te orientar para os próximos passos e os detalhes da matrícula. Posso prosseguir com seu cadastro ou prefere tirar alguma dúvida pontual sobre o programa?",
-    "ai: Ótimo, já entendi que seu interesse é direcionado ao curso TEA, TDAH e Inclusão: Saúde, Família e Sociedade. Essa pós-graduação trabalha temas como neurodesenvolvimento, políticas públicas de inclusão, estratégias para integração de alunos neurodivergentes e o papel da família e da escola, sempre priorizando a construção de uma cultura inclusiva na gestão escolar.\nVocê pode conhecer detalhes da estrutura e forma de aplicação do curso neste vídeo de apresentação.\nE conferir a grade curricular e informações em PDF.\nSe quiser seguir para inscrição ou tirar dúvidas pontuais sobre valor, prazo ou formas de ingresso, me avise que já te passo as próximas orientações.",
-    "human: Estou no trânsito agora . Chegando no trabalho vejo o vídeo e te chamo aqui",
-    "ai: Perfeito, fique à vontade para assistir ao vídeo quando conseguir! Assim que estiver pronta, é só me chamar aqui para conversarmos sobre dúvidas ou sobre o processo de matrícula. Deixo aberto para avançarmos juntos quando for o melhor momento para você."
+    "human: Eu sou Pessoa_005",
+    "ai: Olá, Pessoa_005, eu sou a Beatriz, consultora de carreira da +A Code Academy. Vi que você tem interesse em uma pós-graduação. Me conta: você já tem um curso em mente?",
+    "human: Cuidador de idoso",
+    "ai: Entendi sua busca pelo tema de cuidados com idosos. Muitos profissionais da área procuram especialização para aprimorar o atendimento e criar novas oportunidades. Você já atua com idosos atualmente ou está pensando em entrar nesse mercado?",
+    "human: Já atuo",
+    "ai: Que ótimo saber que você já atua na área! A pós-graduação em Saúde do Idoso: Cuidando da Mente e do Corpo é pensada justamente para profissionais como você, que desejam aprofundar os conhecimentos para melhorar a qualidade de vida, autonomia e saúde mental dos idosos. O curso é 100% online e voltado para práticas atuais de promoção da saúde.\nSeparei o material oficial com todos os detalhes do curso: Depois de dar uma olhada, posso te ajudar a avançar na inscrição ou tirar dúvidas sobre as próximas etapas. Vamos avançar hoje mesmo?"
   ],
-  "sessionId": "S_cb815acbt33"
+  "sessionId": "S_cb815acb4"
 }
 ```
 
-Resposta completa observada:
+Saida completa:
 
 ```json
 {
   "success": true,
   "data": {
-    "session_id": "S_cb815acbt33",
-    "evaluated_at": "2026-04-09T18:14:59Z",
-    "score_final": 90.5,
+    "session_id": "S_cb815acb4",
+    "evaluated_at": "2026-04-09T19:24:45Z",
+    "score_final": 97.8,
     "classification": "excelente",
-    "executive_summary": "O atendimento alcançou score de 90,5 pontos com classificação excelente. Os principais pontos fortes foram a assertividade perfeita na resposta às dúvidas do lead, total conformidade com regras de negócio e qualificação bem estruturada com 4 perguntas relevantes que mapearam corretamente o perfil de uma diretora escolar buscando especialização em TEA, TDAH e inclusão. Como pontos de atenção, o bot fez uma suposição sem confirmação sobre a aplicação profissional do conhecimento e enviou duas mensagens duplicadas consecutivas, impactando levemente o fluxo da conversa. O atendimento permanece em status pendente com material enviado e call-to-action presente, aguardando o retorno do lead após assistir ao vídeo apresentado.",
+    "executive_summary": "O atendimento alcançou score excelente de 97,8 pontos, com desempenho perfeito na qualificação do lead, assertividade das respostas e condução da conversa. O bot identificou corretamente que o lead é um profissional experiente em cuidados com idosos buscando aprofundar conhecimentos, apresentou a pós-graduação em Saúde do Idoso de forma alinhada ao perfil e manteve fluxo consistente sem perder contexto. O único ponto de atenção está no desfecho, que atingiu 78 pontos, sugerindo oportunidade de melhoria no encaminhamento final. O atendimento foi finalizado com envio de material e call-to-action presente, posicionando o lead adequadamente para as próximas etapas.",
     "scores": {
       "C1": {
         "criterion_id": "C1",
         "criterion_name": "Identificação e compreensão da necessidade",
-        "score": 85,
-        "justification": "O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 4 perguntas de qualificação, registrou 1 suposições sem confirmação e lead_objective='Aprofundar conhecimento em TEA, TDAH e inclusão para promover práticas inclusivas nas escolas'. Deduções aplicadas: info assumida sem confirmação: -15pts.",
-        "evidences": [
-          "lead_area_of_interest: Educação inclusiva",
-          "lead_background: Diretora escolar. Formação: Pedagogia, Pós em educação brasileira, MBA em gestão escolar",
-          "lead_objective: Aprofundar conhecimento em TEA, TDAH e inclusão para promover práticas inclusivas nas escolas",
-          "qualification_questions_asked: ['Você já tem algum curso em mente ou gostaria de ajuda para escolher?', 'Posso te perguntar qual sua área de formação ou atuação para entender como essa especialização pode ajudar nos seus objetivos?', \"Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva?\", 'Tem algum desafio específico ou objetivo que te motivou a buscar o curso de TEA, TDAH e Inclusão?']",
-          "repeated_qualification_questions: []",
-          "info_assumed_without_confirmation: ['Bot assumiu que o lead buscava especialização em educação inclusiva sem confirmar se era para aplicação profissional ou pessoal']",
-          "context_lost_moments: []"
-        ],
-        "deductions": [
-          "info assumida sem confirmação: -15pts"
-        ]
+        "score": 100,
+        "justification": "O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 2 perguntas de qualificação, registrou 0 suposições sem confirmação e lead_objective='Aprofundar conhecimentos e aprimorar o atendimento na área de cuidados com idosos'. Não houve deduções aplicadas neste critério."
       },
       "C2": {
         "criterion_id": "C2",
         "criterion_name": "Assertividade da resposta",
         "score": 100,
-        "justification": "O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. Foram identificadas 0 perguntas sem resposta e 0 perguntas com deflexão. Não houve deduções aplicadas neste critério.",
-        "evidences": [
-          "lead_questions_asked: []",
-          "unanswered_questions: []",
-          "deflected_questions: []",
-          "course_correctly_identified: True"
-        ],
-        "deductions": []
+        "justification": "O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. Foram identificadas 0 perguntas sem resposta e 0 perguntas com deflexão. Não houve deduções aplicadas neste critério."
       },
       "C3": {
         "criterion_id": "C3",
         "criterion_name": "Condução e fluxo da conversa",
-        "score": 85,
-        "justification": "O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. A conversa passou por 11 etapas e registrou 1 deduções relevantes de fluxo. Deduções aplicadas: mensagem duplicada: -15pts.",
-        "evidences": [
-          "duplicate_bot_messages: ['Bot enviou duas mensagens consecutivas sobre o curso TEA, TDAH e Inclusão sem mensagem do lead entre elas (mensagens 5 e 6)']",
-          "context_lost_moments: []",
-          "wrong_course_assumed: False",
-          "non_text_input_handled: None",
-          "flow_progression: ['Saudação e identificação do interesse geral em pós-graduação', 'Lead menciona interesse em educação inclusiva', 'Bot apresenta curso específico: TEA, TDAH e Inclusão', 'Bot qualifica formação e atuação do lead', 'Lead confirma formação: Pedagogia, Pós em educação brasileira, MBA em gestão escolar', 'Bot qualifica objetivo específico do lead', 'Bot apresenta material do curso (vídeo e PDF)', 'Bot oferece próximos passos (cadastro ou dúvidas)', 'Bot reforça apresentação do curso com detalhes adicionais', 'Lead informa que está em trânsito e assistirá ao vídeo depois', 'Bot confirma disponibilidade para continuar quando o lead retornar']"
-        ],
-        "deductions": [
-          "mensagem duplicada: -15pts"
-        ]
+        "score": 100,
+        "justification": "O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. A conversa passou por 8 etapas e registrou 0 deduções relevantes de fluxo. Não houve deduções aplicadas neste critério."
       },
       "C4": {
         "criterion_id": "C4",
         "criterion_name": "Conformidade com regras de negócio",
         "score": 100,
-        "justification": "O critério verifica aderência às políticas comerciais e de personalização. Foram observadas 0 informações possivelmente inventadas e name_mismatch=False. Não houve deduções aplicadas neste critério.",
-        "evidences": [
-          "bot_greeted_lead_as: Pessoa_006",
-          "name_mismatch: False",
-          "price_revealed_directly: False",
-          "invented_information: []",
-          "honest_when_uninformed: None"
-        ],
-        "deductions": []
+        "justification": "O critério verifica aderência às políticas comerciais e de personalização. Foram observadas 0 informações possivelmente inventadas e name_mismatch=False. Não houve deduções aplicadas neste critério."
       },
       "C5": {
         "criterion_id": "C5",
         "criterion_name": "Desfecho e encaminhamento",
-        "score": 72,
-        "justification": "O desfecho foi avaliado pelo encaminhamento final, envio de material e presença de CTA. O status final identificado foi 'pending'. Deduções aplicadas: status pending com material enviado e CTA presente: faixa 70-79.",
-        "evidences": [
-          "resolution_status: pending",
-          "material_sent: True",
-          "cta_present: True",
-          "last_message_sender: bot"
-        ],
-        "deductions": [
-          "status pending com material enviado e CTA presente: faixa 70-79"
-        ]
-      }
-    },
-    "extracted_facts": {
-      "metadata": {
-        "session_id": "Pessoa_002",
-        "total_turns": 12,
-        "lead_turn_count": 6,
-        "bot_turn_count": 6
-      },
-      "lead_profile": {
-        "lead_name_informed": "Pessoa_002",
-        "lead_area_of_interest": "Educação inclusiva",
-        "lead_background": "Diretora escolar. Formação: Pedagogia, Pós em educação brasileira, MBA em gestão escolar",
-        "lead_objective": "Aprofundar conhecimento em TEA, TDAH e inclusão para promover práticas inclusivas nas escolas",
-        "lead_already_works_in_area": true
-      },
-      "qualification": {
-        "qualification_questions_asked": [
-          "Você já tem algum curso em mente ou gostaria de ajuda para escolher?",
-          "Posso te perguntar qual sua área de formação ou atuação para entender como essa especialização pode ajudar nos seus objetivos?",
-          "Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva?",
-          "Tem algum desafio específico ou objetivo que te motivou a buscar o curso de TEA, TDAH e Inclusão?"
-        ],
-        "repeated_qualification_questions": [],
-        "info_assumed_without_confirmation": [
-          "Bot assumiu que o lead buscava especialização em educação inclusiva sem confirmar se era para aplicação profissional ou pessoal"
-        ]
-      },
-      "assertiveness": {
-        "lead_questions_asked": [],
-        "unanswered_questions": [],
-        "deflected_questions": [],
-        "course_correctly_identified": true,
-        "course_presented": [
-          "TEA, TDAH e Inclusão: Saúde, Família e Sociedade"
-        ],
-        "course_not_found": false
-      },
-      "flow": {
-        "duplicate_bot_messages": [
-          "Bot enviou duas mensagens consecutivas sobre o curso TEA, TDAH e Inclusão sem mensagem do lead entre elas (mensagens 5 e 6)"
-        ],
-        "context_lost_moments": [],
-        "wrong_course_assumed": false,
-        "wrong_course_assumed_evidence": null,
-        "non_text_input_received": false,
-        "non_text_input_handled": null,
-        "flow_progression": [
-          "Saudação e identificação do interesse geral em pós-graduação",
-          "Lead menciona interesse em educação inclusiva",
-          "Bot apresenta curso específico: TEA, TDAH e Inclusão",
-          "Bot qualifica formação e atuação do lead",
-          "Lead confirma formação: Pedagogia, Pós em educação brasileira, MBA em gestão escolar",
-          "Bot qualifica objetivo específico do lead",
-          "Bot apresenta material do curso (vídeo e PDF)",
-          "Bot oferece próximos passos (cadastro ou dúvidas)",
-          "Bot reforça apresentação do curso com detalhes adicionais",
-          "Lead informa que está em trânsito e assistirá ao vídeo depois",
-          "Bot confirma disponibilidade para continuar quando o lead retornar"
-        ]
-      },
-      "compliance": {
-        "bot_greeted_lead_as": "Pessoa_002",
-        "name_mismatch": false,
-        "price_asked_by_lead": false,
-        "price_revealed_directly": false,
-        "escalation_triggered": false,
-        "escalation_trigger_reason": null,
-        "invented_information": [],
-        "honest_when_uninformed": null
-      },
-      "resolution": {
-        "resolution_status": "material_sent",
-        "material_sent": true,
-        "cta_present": true,
-        "last_message_sender": "bot",
-        "lead_last_message": "Sim, quero saber mais",
-        "bot_last_message": "Ficou com alguma dúvida ou gostaria de saber detalhes específicos do curso? Me avise para eu te ajudar nas próximas etapas!"
+        "score": 78,
+        "justification": "O desfecho foi avaliado pelo encaminhamento final, envio de material e presença de CTA. O status final identificado foi 'material_sent'. Não houve deduções aplicadas neste critério."
       }
     },
     "strengths": [
+      "C1 com score 100.0: O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 2 perguntas de qualificação, registrou 0 suposições sem confirmação e lead_objective='Aprofundar conhecimentos e aprimorar o atendimento na área de cuidados com idosos'. Não houve deduções aplicadas neste critério.",
       "C2 com score 100.0: O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. Foram identificadas 0 perguntas sem resposta e 0 perguntas com deflexão. Não houve deduções aplicadas neste critério.",
-      "C4 com score 100.0: O critério verifica aderência às políticas comerciais e de personalização. Foram observadas 0 informações possivelmente inventadas e name_mismatch=False. Não houve deduções aplicadas neste critério.",
-      "C1 com score 85.0: O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 4 perguntas de qualificação, registrou 1 suposições sem confirmação e lead_objective='Aprofundar conhecimento em TEA, TDAH e inclusão para promover práticas inclusivas nas escolas'. Deduções aplicadas: info assumida sem confirmação: -15pts."
+      "C3 com score 100.0: O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. A conversa passou por 8 etapas e registrou 0 deduções relevantes de fluxo. Não houve deduções aplicadas neste critério."
     ],
     "improvement_areas": [
-      "C5: corrigir status pending com material enviado e CTA presente: faixa 70-79",
-      "C1: corrigir info assumida sem confirmação: -15pts",
-      "C3: corrigir mensagem duplicada: -15pts"
+      "C5: aprofundar o critério 'Desfecho e encaminhamento'.",
+      "C1: aprofundar o critério 'Identificação e compreensão da necessidade'.",
+      "C2: aprofundar o critério 'Assertividade da resposta'."
+    ]
+  }
+}
+```
+
+### Exemplo com score baixo
+
+Entrada completa:
+
+```json
+{
+  "messages": [
+    "human: Eu sou Pessoa_008",
+    "human: Tenho interesse em pós em neurociência. Quais vc tem e valores?",
+    "ai: Pessoa_008, temos várias opções de pós-graduação relacionadas à neurociência: Neurociência Aplicada: Produtividade e Performance Humana, Neurociência e Comportamento Alimentar, Neurociência, Psicologia Positiva e Mindfulness, Neurobranding e Neuromarketing: Estratégias de Engajamento Sensorial, Neuroarquitetura, Bem-estar e Experiência do Usuário e Neurocomunicação: Estratégias para Narrativas de Impacto.\nOs valores e detalhes do investimento são apresentados diretamente por um especialista. Para garantir um atendimento personalizado, posso agendar a transferência do seu atendimento para um especialista.\nTem preferência por algum desses temas para aprofundarmos e direcionar a conversa?",
+    "human: Pelos nomes, me interesse por:\nNeurociência, psicologia positiva e mindfulness e neurocomunicacao.",
+    "human: Mas gostaria de entender melhor",
+    "human: E ver os valores",
+    "ai: Ótimos interesses! Separei dois materiais para que você conheça melhor cada curso:\n\n- Neurociência, Psicologia Positiva e Mindfulness: PDF de Apresentação | Vídeo do coordenador\n- Neurocomunicação: Estratégias para Narrativas de Impacto: PDF de Apresentação\nPara valores e detalhes do investimento, direciono você para um atendimento personalizado com um especialista. Gostaria de agendar o melhor horário para essa conversa? Assim conseguimos esclarecer todas as dúvidas e avançar para a sua matrícula.",
+    "ai: Veja os principais detalhes sobre as pós que você mencionou:\n\n📚 Pós em Neurociência, Psicologia Positiva e Mindfulness:\n✔️ 100% online, sem encontros presenciais\n✔️ Duração de 12 meses (com acesso garantido por até 24 meses)\n✔️ Carga horária: 360h (média de 6 a 7 horas semanais)\n✔️ Estrutura: 15 disciplinas (20h cada) + 1 avaliação online por disciplina\n✔️ Ao final: Projeto de Aplicação (substitui o TCC tradicional)\n🧑‍🏫 Cada disciplina tem:\n– 3 aulas gravadas\n– 2 aulas ao vivo, das 19h30 às 21h\n(Se não conseguir assistir ao vivo, não tem problema — elas ficam gravadas!)\n🎓 Certificado Lato Sensu +A Code Academy reconhecido pelo MEC, com o mesmo peso do presencial.\n📚 Pós em Neurocomunicação: Estratégias para Narrativas de Impacto:\n✔️ 100% online, sem encontros presenciais\n✔️ Duração de 12 meses (com acesso garantido por até 24 meses)\n✔️ Carga horária: 360h\n✔️ Estrutura: 15 disciplinas + avaliações online por disciplina\n✔️ Projeto de Aplicação ao final (no lugar do TCC tradicional)\n🧑‍🏫 Cada disciplina tem 3 aulas gravadas e 2 ao vivo\n🎓 Certificado Lato Sensu +A Code Academy reconhecido pelo MEC, mesmo peso do presencial\nSobre valores, para garantir a oferta personalizada e com todas as condições disponíveis, preciso agendar a transferência do seu atendimento para um especialista. Posso fazer o agendamento para você agora?\nFez sentido para o que você busca? Se quiser, abrimos a transferência para tirar dúvidas sobre valores e condições."
+  ],
+  "sessionId": "S_d8f548de"
+}
+```
+
+Saida completa:
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "S_d8f548de",
+    "evaluated_at": "2026-04-09T19:20:02Z",
+    "score_final": 47.1,
+    "classification": "critico",
+    "executive_summary": "Atendimento classificado como crítico com score 47.1. O bot identificou corretamente os cursos de interesse do lead, mas falhou gravemente na qualificação inicial, não realizando nenhuma pergunta para compreender o background e objetivo do cliente antes de oferecer agendamento. A conversa apresentou três mensagens duplicadas do bot oferecendo agendamento com especialista, causando perda de contexto, e não respondeu adequadamente à pergunta do lead sobre valores. Pontos positivos incluem conformidade com regras de negócio, envio de material e presença de call-to-action, deixando o atendimento em status pendente. Recomenda-se treinar o bot para qualificar leads antes de oferecer agendamentos e eliminar redundâncias nas mensagens.",
+    "scores": {
+      "C1": {
+        "criterion_id": "C1",
+        "criterion_name": "Identificação e compreensão da necessidade",
+        "score": 37,
+        "justification": "O critério considera a qualidade da qualificação inicial e a aderência aos fatos informados pelo lead. O bot fez 0 perguntas de qualificação, registrou 0 suposições sem confirmação e lead_objective=None. Deduções aplicadas: ausência de qualificação: -45pts; background do lead não identificado: -8pts; objetivo do lead não identificado: -10pts."
+      },
+      "C2": {
+        "criterion_id": "C2",
+        "criterion_name": "Assertividade da resposta",
+        "score": 60,
+        "justification": "O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. Foram identificadas 1 perguntas sem resposta e 1 perguntas com deflexão. Deduções aplicadas: pergunta sem resposta: -25pts; pergunta desviada: -15pts."
+      },
+      "C3": {
+        "criterion_id": "C3",
+        "criterion_name": "Condução e fluxo da conversa",
+        "score": 18,
+        "justification": "O fluxo foi avaliado pela progressão da conversa e pela preservação de contexto. A conversa passou por 8 etapas e registrou 4 deduções relevantes de fluxo. Deduções aplicadas: mensagem duplicada: -20pts; mensagem duplicada: -20pts; mensagem duplicada: -20pts; perda de contexto: -22pts."
+      },
+      "C4": {
+        "criterion_id": "C4",
+        "criterion_name": "Conformidade com regras de negócio",
+        "score": 65,
+        "justification": "O critério verifica aderência às políticas comerciais e de personalização. Foram observadas 0 informações possivelmente inventadas e name_mismatch=False. Deduções aplicadas: não escalou quando devia: -35pts."
+      },
+      "C5": {
+        "criterion_id": "C5",
+        "criterion_name": "Desfecho e encaminhamento",
+        "score": 62,
+        "justification": "O desfecho foi avaliado pelo encaminhamento final, envio de material e presença de CTA. O status final identificado foi 'pending'. Deduções aplicadas: status pending com material enviado e CTA presente: faixa 60-69."
+      }
+    },
+    "strengths": [
+      "C4 com score 65.0: O critério verifica aderência às políticas comerciais e de personalização. Foram observadas 0 informações possivelmente inventadas e name_mismatch=False. Deduções aplicadas: não escalou quando devia: -35pts.",
+      "C5 com score 62.0: O desfecho foi avaliado pelo encaminhamento final, envio de material e presença de CTA. O status final identificado foi 'pending'. Deduções aplicadas: status pending com material enviado e CTA presente: faixa 60-69.",
+      "C2 com score 60.0: O critério mede se as dúvidas do lead foram respondidas de forma direta e específica. Foram identificadas 1 perguntas sem resposta e 1 perguntas com deflexão. Deduções aplicadas: pergunta sem resposta: -25pts; pergunta desviada: -15pts."
+    ],
+    "improvement_areas": [
+      "C3: corrigir mensagem duplicada: -20pts; mensagem duplicada: -20pts; mensagem duplicada: -20pts; perda de contexto: -22pts",
+      "C1: corrigir ausência de qualificação: -45pts; background do lead não identificado: -8pts; objetivo do lead não identificado: -10pts",
+      "C2: corrigir pergunta sem resposta: -25pts; pergunta desviada: -15pts"
     ]
   }
 }
@@ -304,6 +272,8 @@ Resposta completa observada:
 ```bash
 pytest tests/ -v
 ```
+
+O repositório também inclui workflow do GitHub Actions para rodar testes e cobertura mínima em `push` e `pull_request`.
 
 ## Docker
 

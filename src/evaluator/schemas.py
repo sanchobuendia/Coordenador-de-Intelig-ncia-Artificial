@@ -61,6 +61,15 @@ class ResolutionAnalysis(BaseModel):
     bot_last_message: str = ""
 
 
+class SafetyAnalysis(BaseModel):
+    prompt_injection_detected: bool = False
+    prompt_injection_signals: list[str] = Field(default_factory=list)
+    sensitive_data_redacted: bool = False
+    redacted_entities: list[str] = Field(default_factory=list)
+    redaction_count: int = 0
+    conversation_sanitized: bool = False
+
+
 class ConversationMetadata(BaseModel):
     session_id: str
     total_turns: int
@@ -76,6 +85,7 @@ class ExtractedFacts(BaseModel):
     flow: FlowAnalysis
     compliance: ComplianceAnalysis
     resolution: ResolutionAnalysis
+    security: SafetyAnalysis = Field(default_factory=SafetyAnalysis)
 
 
 class CriterionScore(BaseModel):
@@ -83,8 +93,8 @@ class CriterionScore(BaseModel):
     criterion_name: str
     score: float = Field(ge=0.0, le=100.0)
     justification: str
-    evidences: list[str] = Field(default_factory=list)
-    deductions: list[str] = Field(default_factory=list)
+    evidences: list[str] | None = Field(default_factory=list)
+    deductions: list[str] | None = Field(default_factory=list)
 
     @field_validator("evidences", "deductions", mode="before")
     @classmethod
@@ -120,7 +130,7 @@ class EvaluationReport(BaseModel):
     classification: Classification
     executive_summary: str = ""
     scores: dict[str, CriterionScore]
-    extracted_facts: ExtractedFacts
+    extracted_facts: ExtractedFacts | None = None
     strengths: list[str] = Field(default_factory=list)
     improvement_areas: list[str] = Field(default_factory=list)
 
@@ -129,6 +139,13 @@ class EvaluationReport(BaseModel):
     def validate_iso_date(cls, value: str) -> str:
         datetime.fromisoformat(value.replace("Z", "+00:00"))
         return value
+
+    def to_executive_view(self) -> "EvaluationReport":
+        compact_scores = {
+            criterion_id: score.model_copy(update={"evidences": None, "deductions": None})
+            for criterion_id, score in self.scores.items()
+        }
+        return self.model_copy(update={"scores": compact_scores, "extracted_facts": None})
 
 
 class EvaluationRequest(BaseModel):
@@ -140,21 +157,15 @@ class EvaluationRequest(BaseModel):
             "example": {
                 "sessionId": "S_cb815acb",
                 "messages": [
-                    "human: Eu sou Pessoa_002",
-                    'ai: Olá, Pessoa_002! Eu sou a Beatriz, consultora de carreira da +A Code Academy. Vi que você tem interesse em uma pós-graduação. Você já tem algum curso em mente ou gostaria de ajuda para escolher?',
-                    "human: Dentro de Ed inclusiva",
-                    'ai: Entendi seu interesse em abordar temas de educação inclusiva. Temos uma pós em "TEA, TDAH e Inclusão: Saúde, Família e Sociedade", que pode ser relevante para esse campo.\nPosso te perguntar qual sua área de formação ou atuação para entender como essa especialização pode ajudar nos seus objetivos?',
-                    'human: Reposta da mensagem:  Entendi seu interesse em abordar temas de educação inclusiva. Temos uma pós em "TEA, TDAH e Inclusão: Saúde, Família e Sociedade", que pode ser relevante para esse campo. Resposta:  Sim',
-                    "human: Sou diretora escolar",
-                    "ai: Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva? Assim consigo te direcionar melhor.",
-                    "human: Pedagogia \nPós em educação brasileira \nMBA em gestão escolar",
-                    "ai: Ótimo saber que você é diretora escolar! Muitos profissionais de gestão na educação buscam essa especialização para promover práticas mais inclusivas nas escolas.\nTem algum desafio específico ou objetivo que te motivou a buscar o curso de TEA, TDAH e Inclusão?",
-                    "human: Reposta da mensagem:  Só para confirmar, quando você respondeu 'sim', está dizendo que já atua ou tem formação na área de educação inclusiva? Assim consigo te direcionar melhor. Resposta:  Não . Sim para o interesse nesse curso",
-                    "ai: Sua formação é uma base sólida para liderar ações de inclusão escolar. A pós em TEA, TDAH e Inclusão: Saúde, Família e Sociedade aprofunda o olhar sobre políticas inclusivas, a integração de talentos neurodiversos, e prepara gestores para construir estratégias efetivas junto a equipes e famílias.\nVeja o vídeo de apresentação e acesse o material completo do curso nos links abaixo:\nSe quiser, posso te orientar para os próximos passos e os detalhes da matrícula. Posso prosseguir com seu cadastro ou prefere tirar alguma dúvida pontual sobre o programa?",
-                    "ai: Ótimo, já entendi que seu interesse é direcionado ao curso TEA, TDAH e Inclusão: Saúde, Família e Sociedade. Essa pós-graduação trabalha temas como neurodesenvolvimento, políticas públicas de inclusão, estratégias para integração de alunos neurodivergentes e o papel da família e da escola, sempre priorizando a construção de uma cultura inclusiva na gestão escolar.\nVocê pode conhecer detalhes da estrutura e forma de aplicação do curso neste vídeo de apresentação.\nE conferir a grade curricular e informações em PDF.\nSe quiser seguir para inscrição ou tirar dúvidas pontuais sobre valor, prazo ou formas de ingresso, me avise que já te passo as próximas orientações.",
-                    "human: Estou no trânsito agora . Chegando no trabalho vejo o vídeo e te chamo aqui",
-                    "ai: Perfeito, fique à vontade para assistir ao vídeo quando conseguir! Assim que estiver pronta, é só me chamar aqui para conversarmos sobre dúvidas ou sobre o processo de matrícula. Deixo aberto para avançarmos juntos quando for o melhor momento para você.",
-                ],
+                            "human: Eu sou Pessoa_001",
+                            "ai: Olá, Pessoa_001, eu sou a Beatriz, consultora de carreira da +A Code Academy. Vi que você tem interesse em uma pós-graduação. Me conta: você já tem um curso em mente?",
+                            "human: Transição energética",
+                            "ai: Ótima escolha! Esse tema está em destaque devido às mudanças globais na área de energia. Para entender como essa pós pode trazer resultados reais para sua carreira: você já atua no setor de energia, ou está pensando em migrar para essa área?",
+                            "human: Atuo",
+                            "ai: Ótimo, isso torna sua experiência ainda mais relevante para o curso. Qual é o principal objetivo que você busca ao se especializar em Transição Energética? Por exemplo, desenvolver competências específicas, crescer na empresa ou explorar novas áreas do setor.",
+                            "human: Autodesenvolvimento",
+                            "ai: Entendi, investir no autodesenvolvimento é fundamental para se destacar profissionalmente. Pensando nisso, o que você espera conquistar ou mudar em sua trajetória ao se especializar nessa área?"
+                            ],
             }
         },
     )

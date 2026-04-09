@@ -18,7 +18,7 @@ def test_c4_deducts_wrong_name():
         "ai: Posso te encaminhar."
     )
     score = heuristic_evaluate(criterion_by_id("C4"), facts)
-    assert "nome errado do lead: -25pts" in score.deductions
+    assert "nome errado do lead: -30pts" in score.deductions
 
 
 def test_c2_detects_deflected_question():
@@ -27,4 +27,4 @@ def test_c2_detects_deflected_question():
         "ai: Elas acontecem das 19h30 às 21h."
     )
     score = heuristic_evaluate(criterion_by_id("C2"), facts)
-    assert "pergunta desviada: -10pts" in score.deductions
+    assert "pergunta desviada: -15pts" in score.deductions
